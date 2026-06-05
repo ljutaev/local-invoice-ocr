@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>DeepSeek як бекенд Claude Code: підміна, ціни, проєкти</title>
+<style>
+  :root{--ink:#1a1a2e;--muted:#555;--accent:#7c3aed;--accent2:#0ea5e9;--code-bg:#f5f5fa;--border:#e2e2ec;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;}
+  *{box-sizing:border-box}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  body{font-family:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;color:var(--ink);line-height:1.55;font-size:11pt;margin:0;}
+  .wrap{max-width:880px;margin:0 auto;padding:0 8mm;}
+  h1{font-size:23pt;line-height:1.15;margin:0 0 6px;letter-spacing:-.5px;}
+  h2{font-size:16pt;margin:26px 0 8px;padding-top:6px;border-top:2px solid var(--accent);color:var(--accent);}
+  h3{font-size:12.5pt;margin:16px 0 4px;}
+  h4{font-size:11pt;margin:12px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  p{margin:6px 0;}
+  code{font-family:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;font-size:9.5pt;background:var(--code-bg);padding:1px 5px;border-radius:4px;border:1px solid var(--border);}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:10px 12px;overflow:auto;font-size:9pt;line-height:1.45;margin:8px 0;}
+  pre code{background:none;border:none;padding:0;}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:9.5pt;}
+  th,td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top;}
+  th{background:var(--accent);color:#fff;font-weight:600;}
+  tr:nth-child(even) td{background:#faf8ff;}
+  .meta{font-size:9pt;color:var(--muted);border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:6px;}
+  .tag{display:inline-block;background:var(--accent2);color:#fff;font-size:8pt;padding:1px 7px;border-radius:10px;margin-right:4px;vertical-align:middle;}
+  .box{border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:10px 0;background:#faf8ff;}
+  .box.tip{border-left:4px solid var(--ok);background:#f0fdf4;}
+  .box.warn{border-left:4px solid var(--warn);background:#fffbeb;}
+  .box.danger{border-left:4px solid var(--bad);background:#fef2f2;}
+  .box .label{font-weight:700;font-size:9pt;text-transform:uppercase;letter-spacing:.5px;}
+  .ok{color:var(--ok);font-weight:600;}.warn{color:var(--warn);font-weight:600;}.bad{color:var(--bad);font-weight:600;}
+  ul,ol{margin:6px 0;padding-left:22px;}li{margin:3px 0;}
+  .small{font-size:9pt;color:var(--muted);}
+  .cite{font-size:7.5pt;color:var(--accent2);vertical-align:super;font-weight:700;}
+  .refs{font-size:9pt;line-height:1.4;}.refs li{margin:4px 0;}.refs code{font-size:8.5pt;}
+  .big{font-size:15pt;font-weight:700;color:var(--accent);}
+  hr{border:none;border-top:1px solid var(--border);margin:18px 0;}
+  @page{margin:14mm 0;size:A4;}
+  h2,h3{break-after:avoid;}pre,table,.box{break-inside:avoid;}
+  footer{margin-top:24px;padding-top:10px;border-top:1px solid var(--border);font-size:8.5pt;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>DeepSeek як бекенд Claude Code<br><span style="font-size:15pt;color:var(--muted);font-weight:400;">підміна моделі, ціни на API та GitHub-проєкти</span></h1>
+<div class="meta" style="margin-top:14px;">
+  <span class="tag">Технічний звіт · доповнення</span>
+  <span class="tag">DeepSeek V4 · Claude Code</span>
+  <strong>Дата:</strong> 2026-06-05 &nbsp;·&nbsp; <strong>Джерела:</strong> офіційні доки DeepSeek API + GitHub-репозиторії (звірено вручну)
+</div>
+<p class="small">Цей файл — окреме доповнення до звіту про локальний LLM. Тема: чи можна «підмінити» дорогий хмарний Claude у Claude Code на дешевший DeepSeek, скільки це коштує і якими проєктами роблять. Ціни взято з <strong>офіційної</strong> сторінки DeepSeek <span class="cite">[1]</span>, метод інтеграції — з офіційної доки <span class="cite">[2]</span>. Ціни змінюються — звіряйте перед оплатою.</p>
+
+<!-- ============ -->
+<h2>1. Коротка суть (TL;DR)</h2>
+<div class="box tip"><span class="label">Так, підміна працює — і офіційно</span>
+<ul style="margin-bottom:0">
+  <li>Claude Code звертається до <strong>Anthropic Messages API</strong>. DeepSeek надає <strong>Anthropic-сумісний ендпойнт</strong> <code>https://api.deepseek.com/anthropic</code> — тобто можна перенаправити Claude Code на DeepSeek <strong>двома змінними оточення, без жодного проксі</strong> <span class="cite">[2][3]</span>.</li>
+  <li>Економія величезна: проєкти заявляють <strong>17×–95× дешевше</strong> за підписку Anthropic (~$7–20/міс проти ~$200/міс) <span class="cite">[5][6]</span>, переважно завдяки автоматичному кешуванню контексту в агентних циклах.</li>
+  <li><strong>Платите ви за токени DeepSeek</strong> — це не «безкоштовно». «Free» у назвах проєктів = безкоштовний софт-проксі, а не безкоштовний inference.</li>
+  <li><span class="warn">Приватність:</span> DeepSeek — хмарний провайдер (Китай). Дані виходять з вашого Mac на їхні сервери — протилежність локальному Ollama. Для конфіденційного коду це суттєво.</li>
+</ul></div>
+
+<!-- ============ -->
+<h2>2. Як працює підміна бекенда</h2>
+<p>Claude Code дозволяє перевизначити, куди слати запити, через змінні оточення. Оскільки DeepSeek «розмовляє» тим самим протоколом, що й Anthropic, підміна — це просто інша адреса + ключ:</p>
+<pre><code>export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+export ANTHROPIC_AUTH_TOKEN=&lt;ваш DeepSeek API-ключ&gt;</code></pre>
+<p>Є три рівні «глибини» підміни:</p>
+<table>
+  <tr><th>Підхід</th><th>Що робить</th><th>Проксі?</th></tr>
+  <tr><td><strong>Офіційний (env-змінні)</strong></td><td>DeepSeek-ендпойнт напряму; одна модель або мапінг тірів</td><td class="ok">Ні</td></tr>
+  <tr><td><strong>Локальний проксі-роутер</strong></td><td>Перехоплює запити, маршрутизує opus/sonnet/haiku на різні моделі/провайдери</td><td class="warn">Так (локальний)</td></tr>
+  <tr><td><strong>MCP-сервер</strong></td><td>Додає DeepSeek як інструмент усередину Claude Code, не підмінюючи основну модель</td><td>—</td></tr>
+</table>
+
+<!-- ============ -->
+<h2>3. Офіційний метод DeepSeek + Claude Code</h2>
+<p>За офіційною документацією DeepSeek <span class="cite">[2]</span>. Передумови: <strong>Node.js 18+</strong>, встановлений Claude Code (<code>npm install -g @anthropic-ai/claude-code</code>), ключ з <code>platform.deepseek.com/api_keys</code>.</p>
+<pre><code># macOS / Linux
+export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+export ANTHROPIC_AUTH_TOKEN=&lt;ваш DeepSeek API-ключ&gt;
+export ANTHROPIC_MODEL=deepseek-v4-pro
+export ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-v4-pro
+export ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-v4-pro
+export ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-v4-flash
+export CLAUDE_CODE_SUBAGENT_MODEL=deepseek-v4-flash
+export CLAUDE_CODE_EFFORT_LEVEL=max
+
+claude</code></pre>
+<h4>Як мапляться «тіри» Claude</h4>
+<table>
+  <tr><th>Запит Claude Code</th><th>→ Модель DeepSeek</th></tr>
+  <tr><td><code>claude-opus-*</code></td><td><strong>deepseek-v4-pro</strong> (потужніша)</td></tr>
+  <tr><td><code>claude-sonnet-*</code> / <code>claude-haiku-*</code></td><td><strong>deepseek-v4-flash</strong> (швидша/дешевша)</td></tr>
+</table>
+<p class="small">Тобто фонові й легкі задачі йдуть на дешевий Flash, а «важкі» (opus) — на Pro. Можна посадити все на Flash, щоб мінімізувати вартість.</p>
+<div class="box warn"><span class="label">Нюанс</span> Web search у Claude Code генерує додаткові API-запити → <strong>додаткові витрати токенів</strong> <span class="cite">[2]</span>. А деякі сторонні гайди зазначають, що allowlist Claude Code не приймає сирі імена DeepSeek-моделей напряму — тоді запускають з <code>--model sonnet/opus</code> і прапорцем <code>--bare</code>, щоб обійти OAuth/keychain <span class="cite">[6]</span>.</div>
+
+<!-- ============ -->
+<h2>4. Ціни DeepSeek API <span style="font-size:10pt;font-weight:400;color:var(--muted)">(офіційні)</span></h2>
+<p>Станом на дату звіту, з офіційної сторінки <span class="cite">[1]</span>. Валюта — <strong>USD за 1M токенів</strong>:</p>
+<table>
+  <tr><th>Модель</th><th>Вхід<br>(cache hit)</th><th>Вхід<br>(cache miss)</th><th>Вихід</th><th>Контекст</th><th>Max output</th></tr>
+  <tr><td><strong>deepseek-v4-flash</strong><br><span class="small">швидка/дешева</span></td><td>$0.0028</td><td>$0.14</td><td>$0.28</td><td>1M</td><td>384K</td></tr>
+  <tr><td><strong>deepseek-v4-pro</strong><br><span class="small">потужна</span></td><td>$0.003625</td><td>$0.435</td><td>$0.87</td><td>1M</td><td>384K</td></tr>
+</table>
+<p class="small">Застарілі (підтримка до 2026-07-24): <code>deepseek-chat</code> → v4-flash (non-thinking), <code>deepseek-reasoner</code> → v4-flash (thinking). DeepSeek залишає за собою право змінювати ціни — наведене не є офертою.</p>
+<div class="box"><span class="label">Чому це так дешево — кешування</span> Контекстне кешування ввімкнено за замовчуванням. В агентних циклах системний промпт і контекст файлів повторюються, тож після першого запиту вони йдуть як <strong>cache hit</strong> — на Flash це <strong>$0.0028/M проти $0.14/M</strong> (≈98% економії). Саме тому реальні сесії коштують копійки.</p></div>
+
+<!-- ============ -->
+<h2>5. Скільки економите проти Anthropic</h2>
+<table>
+  <tr><th>Варіант</th><th>Вхід / Вихід за 1M</th><th>Орієнтовно/міс</th></tr>
+  <tr><td>Anthropic Claude (Sonnet-клас, API)</td><td>~$3 / ~$15</td><td>підписка ~$100–200 <span class="cite">[5]</span></td></tr>
+  <tr><td>DeepSeek <strong>v4-pro</strong></td><td>$0.435 / $0.87</td><td>~$20 (легке) <span class="cite">[5]</span></td></tr>
+  <tr><td>DeepSeek <strong>v4-flash</strong></td><td>$0.14 / $0.28</td><td>~$7 <span class="cite">[6]</span></td></tr>
+</table>
+<p>Звідси й заявлені <strong class="big">17×–95×</strong> економії. Точна цифра залежить від частки кеш-хітів і того, чи все на Flash, чи Pro на «важке».</p>
+
+<!-- ============ -->
+<h2>6. GitHub-проєкти для підміни (зокрема «free-claude-code»)</h2>
+<p>Це проєкт, який ви згадували — клас «free claude code». Насправді їх кілька; ось ключові:</p>
+
+<h3>free-claude-code <span class="small">(Alishahryar1)</span> <span class="cite">[4]</span></h3>
+<p>Найбагатший за функціоналом проксі: маршрутизує Anthropic API-трафік Claude Code на <strong>17 провайдерів</strong> — NVIDIA NIM, OpenRouter, Google AI Studio (Gemini), <strong>DeepSeek</strong>, Mistral, Kimi, Cerebras, Groq, Fireworks, Z.ai, <strong>LM Studio, llama.cpp, Ollama</strong> та ін. Підтримує <strong>per-model routing</strong> (Opus/Sonnet/Haiku/fallback на різні провайдери) і нативний <code>/model</code>-пікер. Працює і з CLI, і з VS Code / JetBrains, і з чат-ботами. <span class="small">Назв-двійників на GitHub кілька (Andrewkeith83 — через NVIDIA NIM + Telegram-бот; Rishurajgautam24) — звіряйте автора.</span></p>
+
+<h3>deepclaude <span class="small">(aattaran)</span> <span class="cite">[5]</span></h3>
+<p>Локальний проксі на <code>localhost:3200</code>; зберігає весь UX Claude Code (редагування файлів, bash, git). Бекенди: <strong>DeepSeek V4 Pro (дефолт)</strong>, OpenRouter, Fireworks, Anthropic. Заявлено <strong>17× дешевше</strong> (~$20/міс проти $200). Ліцензія MIT. Запуск через <code>deepclaude.sh</code>.</p>
+<div class="box warn"><span class="label">Обмеження deepclaude (важливо)</span>
+<ul style="margin-bottom:0">
+  <li>Vision/зображення через Anthropic-ендпойнт DeepSeek <strong>не підтримується</strong></li>
+  <li><strong>Паралельний виклик інструментів деградує</strong></li>
+  <li><strong>Немає підтримки MCP-серверних інструментів</strong></li>
+  <li>Складне міркування інколи краще на Claude Opus</li>
+</ul></div>
+
+<h3>claudecode-deepseek-stack <span class="small">(MG-Cafe)</span> <span class="cite">[6]</span></h3>
+<p>Найближче до «чистої підміни двома env-змінними» — <strong>без стороннього проксі</strong>. Ключ кладуть у <code>~/.config/mg-deepseek/key.env</code>, налаштування-оверрайд (що нейтралізує дефолти Vertex/Bedrock порожніми рядками) — у JSON, запуск: <code>claude --bare --settings …</code>. Заявлено <strong>~95× дешевше</strong> (~$7/міс на Flash). Обмеження: треба <code>--model sonnet/opus</code> (allowlist не приймає імена DeepSeek), потрібен <code>--bare</code>.</p>
+
+<h3>Інші <span class="small">(для повноти)</span></h3>
+<ul>
+  <li><strong>DeepSeek-V4-Claude-Code-MCP</strong> — безкоштовний MCP-сервер, що додає DeepSeek як інструмент у Claude Code/Cursor/Codex (не підміняє основну модель, а доповнює; локально-first, 1M контекст).</li>
+  <li><strong>yksanjo/deepseek-code</strong> — окремий open-source CLI на DeepSeek-V4 («свій Claude Code за 1/100 ціни») — це <em>не</em> підміна, а альтернативний клієнт.</li>
+  <li><strong>raine/claude-code-proxy</strong> — проксі, щоб ганяти Claude Code через підписку ChatGPT/Kimi замість API <span class="cite">[7]</span>.</li>
+</ul>
+
+<!-- ============ -->
+<h2>7. Застереження та ризики</h2>
+<div class="box danger"><span class="label">Приватність даних</span> DeepSeek — <strong>хмарний</strong> сервіс. Увесь ваш код, контекст файлів і промпти йдуть на сервери DeepSeek (юрисдикція — Китай) і підлягають їхній політиці зберігання. Це <strong>протилежність локальному Ollama</strong>, де нічого не виходить з Mac. Для коду під NDA / персональних даних — серйозний стоп-фактор. Якщо приватність критична — лишайтесь на локальному Ollama (див. основний звіт), а DeepSeek-підміну використовуйте лише для некритичного коду.</div>
+<ul>
+  <li><strong>Функціональні втрати</strong> через Anthropic-ендпойнт DeepSeek: немає vision, деградує паралельний tool use, немає MCP-інструментів <span class="cite">[5]</span>. Для агентних робочих процесів Claude Code це відчутно.</li>
+  <li><strong>Якість.</strong> DeepSeek V4 сильний у кодингу, але це не паритет з фронтирним Claude на складному міркуванні/довгих агентних ланцюгах.</li>
+  <li><strong>«Free» ≠ безкоштовно.</strong> Безкоштовний лише проксі-софт; за inference DeepSeek платите за токени (хоча й дешево).</li>
+  <li><strong>ToS / стабільність.</strong> Підміна бекенда сторонніми env-змінними не порушує ToS Claude Code сама по собі, але це не офіційно підтримуваний провайдер (на відміну від Bedrock/Vertex), тож гарантій якості/сумісності немає; оновлення Claude Code можуть ламати обхідні прапорці типу <code>--bare</code>.</li>
+  <li><strong>Безпека ключів.</strong> Не комітьте <code>key.env</code> / API-ключі в git.</li>
+</ul>
+
+<!-- ============ -->
+<h2>8. Рекомендація</h2>
+<div class="box tip"><span class="label">Як обрати</span>
+<ul style="margin-bottom:0">
+  <li><strong>Хочете найпростіше й офіційно:</strong> env-метод DeepSeek (розділ 3) — дві основні змінні + мапінг тірів, без проксі.</li>
+  <li><strong>Хочете гнучку маршрутизацію</strong> (різні моделі/провайдери на різні тіри, у т.ч. локальний Ollama як fallback): <strong>free-claude-code</strong> (Alishahryar1) або <strong>deepclaude</strong>.</li>
+  <li><strong>Приватність понад усе:</strong> не DeepSeek, а локальний Ollama з основного звіту. DeepSeek-підміна — для економії на некритичних задачах.</li>
+  <li><strong>Гібрид:</strong> Claude Code на DeepSeek-Flash для рутини + перемикання на справжній Claude для складного. Саме це й дають роутер-проксі.</li>
+</ul></div>
+
+<h2 id="refs">Джерела</h2>
+<ol class="refs">
+  <li>DeepSeek API Docs — Models &amp; Pricing (офіційні ціни) · <code>api-docs.deepseek.com/quick_start/pricing</code></li>
+  <li>DeepSeek API Docs — Integrate with Claude Code (env-змінні, мапінг) · <code>api-docs.deepseek.com/quick_start/agent_integrations/claude_code</code></li>
+  <li>DeepSeek API Docs — Anthropic API (сумісний ендпойнт) · <code>api-docs.deepseek.com/guides/anthropic_api</code></li>
+  <li>free-claude-code (проксі на 17 провайдерів) · <code>github.com/Alishahryar1/free-claude-code</code></li>
+  <li>deepclaude (агент-луп на DeepSeek V4 Pro, 17× дешевше) · <code>github.com/aattaran/deepclaude</code></li>
+  <li>claudecode-deepseek-stack (підміна 2 env, ~95× дешевше) · <code>github.com/MG-Cafe/claudecode-deepseek-stack</code></li>
+  <li>raine/claude-code-proxy (Claude Code через ChatGPT/Kimi) · <code>github.com/raine/claude-code-proxy</code></li>
+  <li>Claude Code — Environment variables (офіц. дока) · <code>code.claude.com/docs/en/env-vars</code></li>
+</ol>
+<p class="small"><strong>Застереження.</strong> Ціни й назви моделей DeepSeek (v4-flash/pro) актуальні станом на дату звіту з офіційної сторінки, але змінюються — звіряйте перед оплатою. Заявлені «17×/95× дешевше» — маркетингові оцінки авторів проєктів за певних патернів використання; ваша економія залежить від частки кеш-хітів і вибору моделі. GitHub-проєкти — сторонні; перевіряйте код і ліцензії перед запуском, особливо ті, що проксують ваші ключі.</p>
+
+<footer>
+  <strong>Доповнення до звіту:</strong> «DeepSeek як бекенд Claude Code». Звірено з офіційними доками DeepSeek API та GitHub-репозиторіями (червень 2026). Парна тема — основний звіт «Локальний запуск LLM: Ollama + Open WebUI», розділ 13 (підключення локальної моделі до Claude Code).
+</footer>
+
+</div>
+</body>
+</html>

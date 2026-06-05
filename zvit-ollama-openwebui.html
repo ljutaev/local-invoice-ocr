@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Локальний запуск LLM: Ollama + Open WebUI на Apple Silicon</title>
+<style>
+  :root{
+    --ink:#1a1a2e; --muted:#555; --accent:#4f46e5; --accent2:#0ea5e9;
+    --bg:#fff; --code-bg:#f5f5fa; --border:#e2e2ec; --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  body{
+    font-family:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+    color:var(--ink); line-height:1.55; font-size:11pt; margin:0;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:0 8mm;}
+  h1{font-size:24pt; line-height:1.15; margin:0 0 6px; letter-spacing:-.5px;}
+  h2{font-size:16pt; margin:26px 0 8px; padding-top:6px; border-top:2px solid var(--accent); color:var(--accent);}
+  h3{font-size:12.5pt; margin:16px 0 4px; color:var(--ink);}
+  h4{font-size:11pt; margin:12px 0 2px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;}
+  p{margin:6px 0;}
+  code{font-family:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace; font-size:9.5pt; background:var(--code-bg); padding:1px 5px; border-radius:4px; border:1px solid var(--border);}
+  pre{background:var(--code-bg); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:6px; padding:10px 12px; overflow:auto; font-size:9pt; line-height:1.45; margin:8px 0;}
+  pre code{background:none; border:none; padding:0; font-size:9pt;}
+  table{border-collapse:collapse; width:100%; margin:10px 0; font-size:9.5pt;}
+  th,td{border:1px solid var(--border); padding:6px 8px; text-align:left; vertical-align:top;}
+  th{background:var(--accent); color:#fff; font-weight:600;}
+  tr:nth-child(even) td{background:#fafaff;}
+  .lead{font-size:11.5pt; color:var(--muted); margin:10px 0 4px;}
+  .meta{font-size:9pt; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:6px;}
+  .tag{display:inline-block; background:var(--accent2); color:#fff; font-size:8pt; padding:1px 7px; border-radius:10px; margin-right:4px; vertical-align:middle;}
+  .box{border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin:10px 0; background:#fafaff;}
+  .box.tip{border-left:4px solid var(--ok); background:#f0fdf4;}
+  .box.warn{border-left:4px solid var(--warn); background:#fffbeb;}
+  .box.danger{border-left:4px solid var(--bad); background:#fef2f2;}
+  .box .label{font-weight:700; font-size:9pt; text-transform:uppercase; letter-spacing:.5px;}
+  .ok{color:var(--ok); font-weight:600;} .warn{color:var(--warn); font-weight:600;} .bad{color:var(--bad); font-weight:600;}
+  ul,ol{margin:6px 0 6px 0; padding-left:22px;} li{margin:3px 0;}
+  .toc{columns:2; column-gap:30px; font-size:10pt; margin:8px 0 4px;}
+  .toc a{color:var(--ink); text-decoration:none;} .toc li{margin:2px 0;}
+  .small{font-size:9pt; color:var(--muted);}
+  .cite{font-size:7.5pt; color:var(--accent2); vertical-align:super; font-weight:700; text-decoration:none;}
+  .refs{font-size:9pt; line-height:1.4;} .refs li{margin:4px 0;} .refs code{font-size:8.5pt;}
+  .cve{font-family:monospace; font-size:8.5pt; background:#fef2f2; color:#b91c1c; padding:1px 5px; border-radius:4px; border:1px solid #fecaca; font-weight:700;}
+  .kbd{font-family:monospace; font-size:9pt; background:#fff; border:1px solid #ccc; border-bottom-width:2px; border-radius:4px; padding:0 5px;}
+  hr{border:none; border-top:1px solid var(--border); margin:18px 0;}
+  @page{margin:14mm 0; size:A4;}
+  h2,h3{break-after:avoid;} pre,table,.box{break-inside:avoid;}
+  .cover{padding:30px 0 10px;}
+  .cover .sub{font-size:13pt; color:var(--muted); margin-top:8px; font-weight:400;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  footer{margin-top:24px; padding-top:10px; border-top:1px solid var(--border); font-size:8.5pt; color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="cover">
+  <h1>Локальний запуск LLM<br>Ollama&nbsp;+&nbsp;Open&nbsp;WebUI на Apple&nbsp;Silicon</h1>
+  <div class="sub">Встановлення · конфігурація · моделі · RAG · безпека · продуктивність · альтернативи</div>
+  <div class="meta" style="margin-top:18px;">
+    <span class="tag">Технічний звіт</span>
+    <span class="tag">macOS · M4 Pro</span>
+    <strong>Цільове залізо:</strong> MacBook Pro · Apple M4 Pro · 14 ядер (10P+4E) · 24&nbsp;ГБ unified memory · macOS&nbsp;15.1 · ~100&nbsp;ГБ вільно &nbsp;·&nbsp; <strong>Дата:</strong> 2026-06-04
+  </div>
+  <p class="small">Звіт укладено під конкретну конфігурацію та <strong>верифіковано через дослідницький харнес</strong>: 25 фактичних тверджень пройшли 3-голосну adversarial-перевірку (23 підтверджено, 2 відсіяно) проти першоджерел — офіційна документація Open WebUI, GitHub, бази вразливостей (Cato CTRL, GitLab Advisories, The Hacker News), бенчмарки заліза. Ключові факти позначено цитатами <span class="cite">[n]</span> зі списком джерел у кінці. Команди та теги моделей звіряйте з актуальними README перед запуском.</p>
+</div>
+
+<h2 id="toc">Зміст</h2>
+<ol class="toc">
+  <li><a href="#1">Що це і навіщо</a></li>
+  <li><a href="#2">Архітектура: як Ollama і Open WebUI працюють разом</a></li>
+  <li><a href="#3">Апаратні вимоги та квантизація</a></li>
+  <li><a href="#4">Що реально тягне 24 ГБ M4 Pro</a></li>
+  <li><a href="#5">Встановлення (покроково)</a></li>
+  <li><a href="#6">Рекомендовані моделі: чат · кодинг · embeddings</a></li>
+  <li><a href="#7">RAG в Open WebUI</a></li>
+  <li><a href="#8">Безпека та приватність</a></li>
+  <li><a href="#9">Продуктивність на Apple Silicon</a></li>
+  <li><a href="#10">Суміжні теми: альтернативи й порівняння</a></li>
+  <li><a href="#11">Швидкий старт під ваш Mac</a></li>
+  <li><a href="#12">Типові проблеми (troubleshooting)</a></li>
+  <li><a href="#13">Підключення локальної моделі до Claude Code</a></li>
+  <li><a href="#refs">Джерела та методологія</a></li>
+</ol>
+
+<!-- ============================================================ -->
+<h2 id="1">1. Що це і навіщо</h2>
+<p><strong>Ollama</strong> — це движок (runtime) для запуску відкритих мовних моделей локально. По суті це зручна обгортка над <code>llama.cpp</code> з менеджером моделей: одна команда <code>ollama run qwen2.5</code> завантажує модель, тримає її в пам'яті й віддає через HTTP API. На Apple Silicon використовує <strong>Metal</strong> для прискорення на GPU.</p>
+<p><strong>Open WebUI</strong> (раніше <em>Ollama WebUI</em>) — це самостійний веб-інтерфейс у стилі ChatGPT, що під'єднується до Ollama (та будь-якого OpenAI-сумісного API). Дає чат, історію, мультикористувацький доступ, RAG по документах, веб-пошук, керування промптами та моделями — усе локально у браузері.</p>
+
+<div class="box tip"><span class="label">Навіщо локально</span>
+<ul style="margin-bottom:0">
+  <li><strong>Приватність:</strong> дані не виходять за межі вашого Mac — критично для конфіденційних документів, коду під NDA, персональних даних.</li>
+  <li><strong>Офлайн:</strong> працює без інтернету після завантаження моделі.</li>
+  <li><strong>Безкоштовно й без лімітів:</strong> немає плати за токени, rate limits чи цензури API.</li>
+  <li><strong>Контроль:</strong> власний вибір моделей, системних промптів, параметрів, версій.</li>
+</ul></div>
+<p class="small"><strong>Чесний компроміс:</strong> локальні моделі 7–32B слабші за фронтирні хмарні (GPT-4-клас, Claude Opus). Для більшості робочих задач — чат, чернетки, кодинг-помічник, RAG по власних файлах — їх якості достатньо; для складного міркування різниця відчутна.</p>
+
+<!-- ============================================================ -->
+<h2 id="2">2. Архітектура: як Ollama і Open WebUI працюють разом</h2>
+<p>Це дві окремі служби, що спілкуються по HTTP:</p>
+<pre><code>┌─────────────┐    HTTP :8080    ┌──────────────┐   HTTP :11434   ┌──────────────┐
+│   Браузер   │ ───────────────► │  Open WebUI  │ ──────────────► │    Ollama    │
+│ (ваш чат)   │ ◄─────────────── │ (Python/Svelte)│ ◄──────────── │  (движок)    │
+└─────────────┘                  └──────────────┘                 └──────┬───────┘
+                                  RAG · auth · історія              Metal / GPU
+                                  vector DB (Chroma)                модель у RAM
+                                                                          │
+                                                              ┌───────────▼──────────┐
+                                                              │  GGUF-моделі на диску │
+                                                              │  ~/.ollama/models      │
+                                                              └───────────────────────┘</code></pre>
+<ul>
+  <li><strong>Ollama</strong> слухає на <code>localhost:11434</code>. Має власний API і <strong>OpenAI-сумісний</strong> ендпойнт на <code>/v1</code> — тобто будь-який інструмент, що вміє OpenAI API, можна націлити на Ollama.</li>
+  <li><strong>Open WebUI</strong> слухає на <code>localhost:8080</code> (Docker) або <code>:8080</code>/<code>:3000</code> залежно від запуску. Зберігає свою БД (SQLite), вектори (ChromaDB), файли — у власному data-каталозі.</li>
+  <li>Open WebUI під'єднується до Ollama через змінну <code>OLLAMA_BASE_URL</code> і так само до будь-яких <strong>OpenAI-сумісних API</strong> (LM Studio, GroqCloud, Mistral, OpenRouter) — кілька бекендів одночасно, з перемиканням моделей в одному інтерфейсі <span class="cite">[1][6]</span>.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="3">3. Апаратні вимоги та квантизація</h2>
+<h3>Чому Apple Silicon тут сильний</h3>
+<p>У Mac з M-чипами <strong>unified memory</strong> — CPU і GPU ділять один пул RAM. Тому «відеопам'ять» = вся ваша RAM (за вирахуванням системного резерву), без копіювань між CPU↔GPU. Це робить Mac дуже ефективним для inference великих моделей порівняно з дискретними GPU обмеженого VRAM.</p>
+
+<h3>Квантизація — головний важіль</h3>
+<p>Моделі роздають у форматі <strong>GGUF</strong> з різним рівнем квантизації — стиснення ваг до меншої розрядності. Менше біт → менше пам'яті й швидше, але трохи нижча якість.</p>
+<table>
+  <tr><th>Квантизація</th><th>Біт/вага</th><th>Якість</th><th>Коли брати</th></tr>
+  <tr><td><code>Q8_0</code></td><td>~8</td><td>Майже як FP16</td><td>Малі моделі (≤8B), коли є запас RAM і потрібна максимальна точність</td></tr>
+  <tr><td><code>Q6_K</code></td><td>~6.5</td><td>Дуже добра</td><td>Компроміс якість/розмір для середніх моделей</td></tr>
+  <tr><td><strong><code>Q5_K_M</code></strong></td><td>~5.5</td><td>Відмінна</td><td>Хороший баланс, трохи якісніше за Q4</td></tr>
+  <tr><td><strong><code>Q4_K_M</code></strong></td><td>~4.5</td><td>Дуже добра <span class="ok">(sweet spot)</span></td><td><strong>Дефолт для більшості</strong> — найкращий баланс розмір/якість/швидкість</td></tr>
+  <tr><td><code>Q3_K_M</code></td><td>~3.5</td><td>Помітна деградація</td><td>Лише коли модель інакше не влазить</td></tr>
+  <tr><td><code>Q2_K</code></td><td>~2.5</td><td>Сильна деградація</td><td>Крайній випадок; часто краще взяти меншу модель у Q4</td></tr>
+</table>
+<div class="box"><span class="label">Правило великого пальця</span> Краще <strong>більша модель у Q4_K_M</strong>, ніж менша у Q8. І майже завжди краще <strong>Q4 нормальної моделі</strong>, ніж Q2 великої. Ollama за замовчуванням тягне саме Q4_K_M, якщо не вказати тег явно.</div>
+
+<h3>Скільки пам'яті потрібно</h3>
+<p>Орієнтовний обсяг RAM ≈ <em>розмір файлу моделі</em> + <em>KV-кеш контексту</em> + <em>~1–2 ГБ оверхеду</em>. KV-кеш росте з довжиною контексту (більше токенів у вікні → більше пам'яті).</p>
+<table>
+  <tr><th>Розмір моделі</th><th>Файл @ Q4_K_M</th><th>~RAM з контекстом</th><th>На 24 ГБ M4 Pro</th></tr>
+  <tr><td>3–4B</td><td>~2–2.5 ГБ</td><td>~4 ГБ</td><td class="ok">Легко, дуже швидко</td></tr>
+  <tr><td>7–8B</td><td>~4.5–5 ГБ</td><td>~6–7 ГБ</td><td class="ok">Ідеально, комфортно</td></tr>
+  <tr><td>12–14B</td><td>~8–9 ГБ</td><td>~10–12 ГБ</td><td class="ok">Дуже добре</td></tr>
+  <tr><td>27–32B</td><td>~18–20 ГБ</td><td>~20–22 ГБ</td><td class="warn">Влазить, але тісно — закрийте важкі застосунки, короткий контекст</td></tr>
+  <tr><td>70B</td><td>~40 ГБ</td><td>~42+ ГБ</td><td class="bad">Не влазить на 24 ГБ</td></tr>
+</table>
+<p class="small">macOS за замовчуванням дозволяє Metal/GPU використовувати приблизно до 65–75% RAM; решта — системі. На 24 ГБ це означає практичну стелю ~16–18 ГБ під саму модель + кеш, тому 32B у Q4 — це межа, а не комфорт.</p>
+
+<!-- ============================================================ -->
+<h2 id="4">4. Що реально тягне 24 ГБ M4 Pro</h2>
+<div class="grid2">
+  <div class="box tip"><span class="label">Золота зона (рекомендую щодня)</span>
+    <ul style="margin-bottom:0">
+      <li><strong>7–14B у Q4_K_M</strong></li>
+      <li>Швидко, з запасом RAM під довгий контекст і RAG</li>
+      <li>Llama 3.1 8B, Qwen2.5 14B, Gemma 2 9B, Mistral, Qwen2.5-Coder 7/14B</li>
+    </ul>
+  </div>
+  <div class="box warn"><span class="label">Стеля (можливо, але тісно)</span>
+    <ul style="margin-bottom:0">
+      <li><strong>27–32B у Q4</strong> (Gemma 2 27B, Qwen2.5 32B)</li>
+      <li>Закрийте браузер/IDE, тримайте короткий контекст</li>
+      <li>Повільніше: ~8–12 ток/с</li>
+    </ul>
+  </div>
+</div>
+<div class="box danger"><span class="label">Поза межами</span> Моделі <strong>70B+</strong> (Llama 3.1/3.3 70B, Qwen 72B) на 24 ГБ не запустяться у придатній якості — потребують ~51 ГБ і не влазять <span class="cite">[10]</span>. Потрібно ≥48 ГБ (краще 64 ГБ) unified memory.</div>
+<div class="box"><span class="label">Підтверджені цифри по M4 Pro 24 ГБ</span> За даними каталогу сумісності willitrunai <span class="cite">[10]</span>: ця конфігурація запускає <strong>~78 моделей «нативно» (швидко)</strong> з 257 сумісних; практична стеля — <strong>~24B параметрів</strong>. Приклади: модель <strong>~8–9B</strong> займає <strong>10–11.2 ГБ</strong> і дає <strong>~38 ток/с при 60K контексту</strong>; щільні <strong>~24B</strong> (Magistral / Devstral Small 24B) влазять лише з обмеженнями — <strong>~20.6 ГБ, ~18 ток/с, 4K контекст</strong>. Це підтверджує таблицю вище: 7–14B — комфорт, ~24B — стеля.</div>
+
+<!-- ============================================================ -->
+<h2 id="5">5. Встановлення (покроково)</h2>
+
+<h3>Крок 1. Ollama (нативно — рекомендований шлях на Mac)</h3>
+<p>Нативна установка дає прямий доступ до Metal/GPU. Два способи:</p>
+<pre><code># Варіант А — Homebrew
+brew install ollama
+brew services start ollama        # запустити як фонову службу
+
+# Варіант Б — офіційний застосунок
+# Завантажити Ollama.app з ollama.com → перетягнути в /Applications
+
+# Перевірка
+ollama --version
+curl http://localhost:11434/api/tags     # має повернути JSON (поки порожній список)</code></pre>
+<div class="box warn"><span class="label">Важливо</span> Запускайте Ollama <strong>нативно</strong>, а не в Docker. Docker Desktop на Mac не пробрасує Apple GPU — модель крутитиметься на CPU й буде в рази повільніша. У Docker тримайте лише Open WebUI.</div>
+
+<h3>Крок 2. Завантажити модель</h3>
+<pre><code>ollama pull qwen2.5:14b           # тег за замовчуванням = Q4_K_M
+ollama pull llama3.1:8b
+ollama run qwen2.5:14b "Привіт! Перевірка зв'язку."   # інтерактивний тест</code></pre>
+
+<h3>Крок 3. Open WebUI</h3>
+<h4>Спосіб A — Docker (рекомендований, найстабільніший)</h4>
+<pre><code># Ollama вже працює нативно на хості → веб-морда в контейнері тягнеться до нього:
+docker run -d \
+  -p 3000:8080 \
+  --add-host=host.docker.internal:host-gateway \
+  -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main
+
+# Відкрити в браузері:
+open http://localhost:3000</code></pre>
+<h4>Спосіб B — через pip (без Docker)</h4>
+<pre><code># Потрібен Python 3.11
+python3 -m venv ~/openwebui-venv
+source ~/openwebui-venv/bin/activate
+pip install open-webui
+open-webui serve            # підніметься на http://localhost:8080</code></pre>
+<p class="small">pip-шлях офіційно підтримується (Python 3.11) і дає нативний non-Docker запуск на <code>localhost:8080</code> <span class="cite">[6]</span>.</p>
+<h4>Спосіб C — all-in-one образ (Ollama вбудовано)</h4>
+<div class="box tip"><span class="label">Найпростіший старт</span> Образ з тегом <code>:ollama</code> <strong>містить і Ollama, і Open WebUI</strong> в одному контейнері — окремо ставити Ollama не треба <span class="cite">[1]</span>:
+<pre style="margin-bottom:0"><code>docker run -d -p 3000:8080 \
+  -v ollama:/root/.ollama -v open-webui:/app/backend/data \
+  --name open-webui ghcr.io/open-webui/open-webui:ollama</code></pre>
+<span class="small">Зручно для швидкого старту. <strong>Але на Mac</strong> Ollama всередині Docker не отримає Apple GPU → CPU-only й повільно. Для продуктивності на вашому M4 Pro краще Спосіб A (нативний Ollama + Docker лише під WebUI).</span></div>
+
+<h3>Крок 4. Перший вхід</h3>
+<ol>
+  <li>Відкрийте інтерфейс → <strong>зареєструйте перший акаунт</strong>. <span class="warn">Перший користувач автоматично стає адміном.</span></li>
+  <li>Open WebUI сам підхопить Ollama, якщо <code>OLLAMA_BASE_URL</code> вказано правильно. Інакше — <em>Settings → Connections → Ollama API</em> → <code>http://host.docker.internal:11434</code> (Docker) або <code>http://localhost:11434</code> (pip).</li>
+  <li>Оберіть модель угорі чату — і працюйте.</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2 id="6">6. Рекомендовані моделі під ваші сценарії</h2>
+<p>Ви обрали всі чотири напрями: чат, кодинг, RAG, приватність. Підбірка під 24 ГБ:</p>
+
+<h3>Загальний чат / асистент</h3>
+<table>
+  <tr><th>Модель</th><th>Команда</th><th>Чим хороша</th></tr>
+  <tr><td><strong>Qwen2.5 14B</strong></td><td><code>ollama pull qwen2.5:14b</code></td><td>Найкращий універсал у вашому класі: міркування, інструкції, мови (вкл. укр.)</td></tr>
+  <tr><td><strong>Llama 3.1 8B</strong></td><td><code>ollama pull llama3.1:8b</code></td><td>Швидкий, надійний, велика екосистема</td></tr>
+  <tr><td>Gemma 2 9B</td><td><code>ollama pull gemma2:9b</code></td><td>Сильний для розміру, від Google</td></tr>
+  <tr><td>Mistral Nemo 12B</td><td><code>ollama pull mistral-nemo</code></td><td>Довгий контекст, добра багатомовність</td></tr>
+  <tr><td>Gemma 2 27B</td><td><code>ollama pull gemma2:27b</code></td><td><span class="warn">Стеля</span> — найрозумніша, що влазить, але повільніше</td></tr>
+</table>
+
+<h3>Кодинг</h3>
+<table>
+  <tr><th>Модель</th><th>Команда</th><th>Чим хороша</th></tr>
+  <tr><td><strong>Qwen2.5-Coder 14B</strong></td><td><code>ollama pull qwen2.5-coder:14b</code></td><td>Найкращий локальний кодер у класі: генерація, рефакторинг, пояснення</td></tr>
+  <tr><td>Qwen2.5-Coder 7B</td><td><code>ollama pull qwen2.5-coder:7b</code></td><td>Швидкий варіант для автодоповнення</td></tr>
+  <tr><td>DeepSeek-Coder-V2 16B</td><td><code>ollama pull deepseek-coder-v2</code></td><td>Сильний MoE-кодер</td></tr>
+  <tr><td>Codestral 22B</td><td><code>ollama pull codestral</code></td><td><span class="warn">На межі</span> — потужний, але важкий для 24 ГБ</td></tr>
+</table>
+<p class="small"><strong>Інтеграція з редактором:</strong> Ollama віддає OpenAI-сумісний API, тож моделі під'єднуються до плагінів типу <em>Continue.dev</em> (VS Code/JetBrains) як локальний бекенд автодоповнення й чату по коду.</p>
+
+<h3>Embeddings (для RAG)</h3>
+<table>
+  <tr><th>Модель</th><th>Команда</th><th>Примітка</th></tr>
+  <tr><td><strong>nomic-embed-text</strong></td><td><code>ollama pull nomic-embed-text</code></td><td>Легка, швидка, хороший дефолт для RAG</td></tr>
+  <tr><td><strong>bge-m3</strong></td><td><code>ollama pull bge-m3</code></td><td>Багатомовна (вкл. укр.), довгі чанки — найкраща для змішаних мов</td></tr>
+  <tr><td>mxbai-embed-large</td><td><code>ollama pull mxbai-embed-large</code></td><td>Якісніша, трохи важча</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="7">7. RAG в Open WebUI</h2>
+<p>RAG (Retrieval-Augmented Generation) дозволяє моделі відповідати на основі <strong>ваших документів</strong>: ви завантажуєте файли, Open WebUI ріже їх на чанки, рахує embeddings, кладе у векторну БД, а під час запиту <strong>підмішує лише релевантні фрагменти на вимогу</strong> — а не пхає весь документ у кожне повідомлення <span class="cite">[3][4]</span>. Open WebUI має вбудований RAG із кількома рушіями вилучення тексту й вибором з <strong>9 векторних БД</strong>: офіційно підтримувані <strong>ChromaDB</strong> та <strong>PGVector</strong>, плюс Qdrant, Milvus, OpenSearch, Elasticsearch та інші <span class="cite">[3][6]</span>.</p>
+<h3>Як користуватися</h3>
+<ul>
+  <li><strong>Разово в чаті:</strong> прикріпіть файл або введіть <code>#</code> + URL/назву документа просто в чаті — <strong>попереднє завантаження не обов'язкове</strong>, вилучення працює одразу <span class="cite">[2]</span>.</li>
+  <li><strong>Постійна база знань:</strong> <em>Workspace → Knowledge</em> → створіть колекцію, завантажте файли (PDF, DOCX, MD, TXT, код). Потім звертайтеся до неї через <code>#</code> у чаті.</li>
+</ul>
+<div class="box warn"><span class="label">Критично для якості RAG</span> Ollama за замовчуванням дає <strong>контекст лише 2048 токенів</strong>, що сильно псує RAG. Підніміть <code>num_ctx</code> до <strong>8192+ (краще &gt;16000)</strong>, щоб вилучені чанки взагалі вмістилися в контекст <span class="cite">[2]</span>.</div>
+<h3>Налаштування якості (Admin → Settings → Documents)</h3>
+<p>Embedding-моделі конфігуруються в <em>Admin Panel → Settings → Documents</em>; підтримуються і Ollama, і OpenAI <span class="cite">[2]</span>. Офіційні рекомендації за сценарієм <span class="cite">[5]</span>:</p>
+<table>
+  <tr><th>Сценарій</th><th>Embedding-модель</th></tr>
+  <tr><td>Один користувач (дефолт, локально)</td><td><code>all-MiniLM-L6-v2</code></td></tr>
+  <tr><td>Багатокористувацький</td><td><code>nomic-embed-text</code> через Ollama</td></tr>
+  <tr><td><strong>Air-gapped / офлайн (ваш приватний кейс)</strong></td><td><code>nomic-embed-text</code> або <code>mxbai-embed-large</code> через Ollama</td></tr>
+  <tr><td>Продакшен</td><td><code>text-embedding-3-small</code> (OpenAI)</td></tr>
+</table>
+<p>Для багатомовних (вкл. українські) документів варто розглянути <code>bge-m3</code>. Параметри chunking — <strong>офіційні рекомендації</strong> <span class="cite">[5]</span>:</p>
+<table>
+  <tr><th>Тип моделі</th><th>Chunk size</th><th>Top K</th><th>Overlap</th></tr>
+  <tr><td><strong>Локальні, контекст ≤8K (ваш кейс)</strong></td><td>1000 токенів</td><td>3–5</td><td>100</td></tr>
+  <tr><td>Хмарні, великий контекст</td><td>2000</td><td>15–25</td><td>200</td></tr>
+</table>
+<ul>
+  <li><strong>Hybrid search + reranking:</strong> увімкніть гібридний пошук (вектори + ключові слова) і reranker (напр. <code>bge-reranker</code>) — помітно піднімає релевантність.</li>
+</ul>
+<div class="box tip"><span class="label">Порада під 24 ГБ</span> Тримайте окрему легку embedding-модель (<code>nomic-embed-text</code> ~0.5 ГБ) — вона працює паралельно з чат-моделлю й майже не з'їдає RAM. Веб-пошук теж можна під'єднати (Admin → Web Search) для RAG по інтернету.</div>
+
+<!-- ============================================================ -->
+<h2 id="8">8. Безпека та приватність</h2>
+<h3>Що насправді лишається локальним</h3>
+<ul>
+  <li><span class="ok">✓</span> Inference моделі, ваші чати, завантажені документи й вектори — <strong>усе на вашому Mac</strong>. Ollama за замовчуванням слухає лише <code>localhost</code>.</li>
+  <li><span class="warn">!</span> <strong>Веб-пошук</strong> в Open WebUI (якщо ввімкнено) шле запити у зовнішній пошуковик — це вже вихід у мережу.</li>
+  <li><span class="warn">!</span> Якщо додасте <strong>зовнішній OpenAI-сумісний бекенд</strong> — ці чати йдуть до того провайдера, не локально.</li>
+</ul>
+<div class="box warn"><span class="label">Нюанс «повного офлайну»</span> Поширена порада ставити <code>OFFLINE_MODE=true</code>, щоб вимкнути завантаження з HuggingFace й вихідні виклики, <strong>не підтвердилась нашою перевіркою</strong> (3/3 верифікатори відхилили формулювання як неточне/непідтверджене). Не покладайтесь на один прапорець для air-gapped — ізолюйте на рівні мережі (firewall) і звіряйте поведінку з актуальною документацією hardening <span class="cite">[4]</span>.</div>
+
+<h3>Актуальні вразливості (важливо — оновлюйтесь!)</h3>
+<p>Open WebUI та Ollama — проєкти, що швидко розвиваються, і в них регулярно знаходять серйозні діри. Підтверджені на момент звіту:</p>
+<table>
+  <tr><th>CVE</th><th>Серйозність</th><th>Суть і виправлення</th></tr>
+  <tr><td><span class="cve">CVE-2026-7482</span><br>«Bleeding Llama»</td><td><span class="bad">CVSS 9.1</span><br>критична</td><td>Heap out-of-bounds read у завантажувачі GGUF-моделей <strong>Ollama</strong>; експлуатується віддалено й <strong>без автентифікації</strong> через <code>/api/create</code> зловмисним GGUF-файлом. Зачіпає версії до <strong>0.17.1</strong> → оновіться <span class="cite">[9]</span>.</td></tr>
+  <tr><td><span class="cve">CVE-2025-64496</span></td><td><span class="warn">CVSS 7.3</span><br>висока</td><td>В <strong>Open WebUI ≤0.6.34</strong> через фічу <em>Direct Connections</em>: SSE-обробник довіряє події <code>execute</code> і виконує код атакувальника через <code>new Function()</code> без валідації → <strong>довільний JS у браузері</strong>. Дозволяє вкрасти JWT з localStorage і захопити акаунт (історія, документи, API-ключі) <span class="cite">[7]</span>.</td></tr>
+  <tr><td><span class="cve">CVE-2026-44563</span></td><td><span class="warn">висока</span></td><td>Відсутня авторизація (CWE-862) в <strong>Open WebUI &lt;0.9.0</strong>: чотири Ollama-proxy ендпойнти (<code>/api/generate</code>, <code>/api/embed</code>, <code>/api/embeddings</code>, <code>/api/show</code>) не перевіряють доступ до моделей → автентифікований юзер дістає чужі моделі. Виправлено в <strong>0.9.0</strong> <span class="cite">[8]</span>.</td></tr>
+</table>
+<div class="box danger"><span class="label">Головне правило</span> <strong>Не виставляйте Open WebUI чи Ollama у відкритий інтернет без автентифікації й TLS.</strong> Ollama REST API <em>не має автентифікації з коробки</em> — потрібен зовнішній auth-proxy / API-gateway і firewall-ізоляція <span class="cite">[9]</span>. А ще: без налаштованого <strong>Redis вихід із Open WebUI не інвалідовує JWT</strong> — токен лишається дійсним до природного закінчення (дефолт ~4 тижні) <span class="cite">[8]</span>.</div>
+<h3>Зміцнення (hardening)</h3>
+<ul>
+  <li><strong>Оновлюйтесь насамперед:</strong> тримайте Ollama ≥0.17.1 та Open WebUI ≥0.9.0 — це закриває три CVE вище.</li>
+  <li><strong>Тримайте на localhost.</strong> Для доступу з інших пристроїв — через VPN/Tailscale або reverse-proxy (Caddy/Nginx) з TLS і паролем, а не пробросом порту.</li>
+  <li><strong>Контроль реєстрації:</strong> Open WebUI автоматично вимикає signup після першого користувача (він стає адміном), а нові акаунти за замовчуванням у статусі <em>pending</em> і потребують схвалення адміна <span class="cite">[4]</span> — не вимикайте цей захист.</li>
+  <li><strong>Налаштуйте Redis</strong>, якщо потрібна коректна інвалідація сесій при виході.</li>
+  <li><strong>Бекап даних:</strong> Docker-том <code>open-webui</code> (або data-каталог pip) містить усі чати, ключі, базу знань — додайте в резервне копіювання, але не кладіть у git/хмару відкритим.</li>
+  <li><strong>Firewall macOS:</strong> увімкніть; обмежте вхідні з'єднання до Ollama й Open WebUI.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="9">9. Продуктивність на Apple Silicon</h2>
+<h3>Орієнтовна швидкість (M4 Pro, Q4_K_M)</h3>
+<table>
+  <tr><th>Модель</th><th>Генерація</th><th>Відчуття</th></tr>
+  <tr><td>3–4B</td><td>~50–80 ток/с</td><td>Миттєво</td></tr>
+  <tr><td>7–8B</td><td>~30–50 ток/с</td><td>Дуже швидко, швидше за читання</td></tr>
+  <tr><td>14B</td><td>~18–28 ток/с</td><td>Комфортно</td></tr>
+  <tr><td>27–32B</td><td>~8–12 ток/с</td><td>Прийнятно, але помітно повільніше</td></tr>
+</table>
+<p class="small">Цифри орієнтовні — залежать від квантизації, довжини контексту й фонового навантаження. «Швидкість читання» людини ≈ 5–8 ток/с, тож усе до 14B відчувається як живий діалог.</p>
+<h3>Оптимізація</h3>
+<ul>
+  <li><strong>Контекст:</strong> довге вікно (<code>num_ctx</code>) роздуває KV-кеш і RAM. Тримайте розумний розмір (4–8K для чату; більше — лише коли треба).</li>
+  <li><strong>Keep-alive:</strong> <code>OLLAMA_KEEP_ALIVE=30m</code> — модель лишається в пам'яті між запитами, не перевантажується щоразу.</li>
+  <li><strong>Паралельність:</strong> уникайте одночасного тримання двох важких моделей — на 24 ГБ вони конкурують за пам'ять і витісняються на диск (різке падіння швидкості).</li>
+  <li><strong>Перша відповідь повільніша</strong> — це завантаження моделі з диска в RAM. Далі швидко.</li>
+  <li><strong>Живлення:</strong> на батареї macOS може тротлити; для важких сесій тримайте в мережі.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="10">10. Суміжні теми: альтернативи й порівняння</h2>
+<p>Ollama — не єдиний шлях. Карта екосистеми локального inference:</p>
+<table>
+  <tr><th>Інструмент</th><th>Що це</th><th>Сильні сторони</th><th>На Apple Silicon</th></tr>
+  <tr><td><strong>Ollama</strong></td><td>CLI/служба-движок</td><td>Простота, менеджер моделей, API, екосистема, інтеграція з Open WebUI</td><td class="ok">Відмінно (Metal)</td></tr>
+  <tr><td><strong>llama.cpp</strong></td><td>Низькорівневий движок (Ollama на ньому й базується)</td><td>Максимум контролю, найсвіжіші фічі, серверний режим</td><td class="ok">Відмінно (рідний Metal)</td></tr>
+  <tr><td><strong>LM Studio</strong></td><td>Десктоп-GUI (закритий, безкоштовний)</td><td>Зручний пошук моделей, чат, локальний сервер; підтримка <strong>MLX</strong></td><td class="ok">Дуже добре; MLX часом швидше</td></tr>
+  <tr><td><strong>MLX / mlx-lm</strong></td><td>ML-фреймворк Apple</td><td>Рідний для Apple Silicon, інколи швидший за llama.cpp; для дослідників</td><td class="ok">Тільки Apple</td></tr>
+  <tr><td><strong>Jan</strong></td><td>Десктоп-застосунок (open source)</td><td>Приватний офлайн-аналог ChatGPT, гарний UI</td><td class="ok">Добре</td></tr>
+  <tr><td><strong>GPT4All</strong></td><td>Десктоп-застосунок</td><td>Простий старт для новачків, локальні документи</td><td class="ok">Добре</td></tr>
+  <tr><td><strong>vLLM</strong></td><td>Серверний движок для продакшену</td><td>Висока пропускність, батчинг, багато користувачів</td><td class="bad">Орієнтований на NVIDIA/CUDA; на Mac слабко</td></tr>
+</table>
+<div class="box"><span class="label">Як обрати</span>
+<ul style="margin-bottom:0">
+  <li><strong>Ollama + Open WebUI</strong> (ваш вибір) — найкращий баланс: серверний движок + потужна веб-морда, мультимодель, RAG, мультикористувач. Оптимально, якщо хочете «свій ChatGPT».</li>
+  <li><strong>LM Studio</strong> — якщо хочете все в одному десктоп-вікні без Docker і поекспериментувати з MLX-швидкістю.</li>
+  <li><strong>llama.cpp напряму</strong> — коли треба тонкий контроль або найсвіжіша підтримка нової моделі, якої ще нема в Ollama.</li>
+  <li><strong>vLLM</strong> — не для Mac; це коли підете в продакшен на NVIDIA-сервері.</li>
+</ul></div>
+<p class="small"><strong>Спільний стандарт:</strong> майже всі вони віддають <strong>OpenAI-сумісний API</strong>. Тому ваш код/плагіни, написані під OpenAI SDK, переносяться між ними зміною лише <code>base_url</code> — зручно для міграції й порівняння.</p>
+
+<!-- ============================================================ -->
+<h2 id="11">11. Швидкий старт під ваш Mac (копіювати й виконувати)</h2>
+<pre><code># 1. Движок
+brew install ollama
+brew services start ollama
+
+# 2. Моделі під ваші сценарії (чат + кодинг + embeddings для RAG)
+ollama pull qwen2.5:14b              # універсальний чат
+ollama pull qwen2.5-coder:14b        # кодинг
+ollama pull nomic-embed-text         # embeddings для RAG
+# (опційно, як стеля) ollama pull gemma2:27b
+
+# 3. Веб-інтерфейс (Docker; Ollama лишається нативним)
+docker run -d -p 3000:8080 \
+  --add-host=host.docker.internal:host-gateway \
+  -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+  -v open-webui:/app/backend/data \
+  --name open-webui --restart always \
+  ghcr.io/open-webui/open-webui:main
+
+# 4. Відкрити, зареєструвати першого (=адмін) користувача
+open http://localhost:3000
+
+# 5. Корисні налаштування Ollama (за бажанням, у ~/.zshrc):
+#   export OLLAMA_KEEP_ALIVE=30m       # тримати модель у RAM
+#   export OLLAMA_FLASH_ATTENTION=1     # економніший KV-кеш</code></pre>
+<p>Далі в Open WebUI: <em>Admin → Settings → Documents</em> → embedding-модель = <code>nomic-embed-text</code> (Ollama), увімкніть hybrid search; вимкніть відкриту реєстрацію. Готово — у вас приватний локальний ChatGPT з RAG.</p>
+
+<!-- ============================================================ -->
+<h2 id="12">12. Типові проблеми (troubleshooting)</h2>
+<table>
+  <tr><th>Симптом</th><th>Причина / Рішення</th></tr>
+  <tr><td>Open WebUI не бачить моделей</td><td>Неправильний <code>OLLAMA_BASE_URL</code>. У Docker має бути <code>http://host.docker.internal:11434</code>, не <code>localhost</code> (бо localhost у контейнері — це сам контейнер). Перевірте, що Ollama запущено: <code>curl localhost:11434/api/tags</code>.</td></tr>
+  <tr><td>Дуже повільно, GPU не вантажиться</td><td>Найімовірніше Ollama запущено в Docker (CPU-only). Перенесіть Ollama на нативний запуск; у Docker лишіть тільки Open WebUI.</td></tr>
+  <tr><td>«Out of memory» / зависання на 32B</td><td>Модель не влазить у 24 ГБ разом з контекстом. Зменшіть <code>num_ctx</code>, закрийте важкі застосунки або візьміть 14B.</td></tr>
+  <tr><td>Перша відповідь дуже довга</td><td>Норма — завантаження моделі в RAM. Тримайте <code>OLLAMA_KEEP_ALIVE</code>, щоб не вивантажувалась.</td></tr>
+  <tr><td>RAG дає нерелевантні відповіді</td><td>Слабка embedding-модель або погані чанки. Переключіть на <code>bge-m3</code>, увімкніть reranking, підберіть chunk size.</td></tr>
+  <tr><td>Порт 3000/8080 зайнятий</td><td>Змініть ліву частину <code>-p</code>: напр. <code>-p 3001:8080</code>.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="13">13. Підключення локальної моделі до Claude Code</h2>
+<p>Claude Code (CLI від Anthropic) за замовчуванням ходить у хмарні моделі Claude, але його <strong>можна спрямувати на власний бекенд</strong> через змінні оточення. Це дозволяє ганяти його на вашій локальній Ollama-моделі — безкоштовно й офлайн.</p>
+
+<div class="box warn"><span class="label">Головне очікування</span> Це <strong>працює, але з суттєвими компромісами</strong>. Claude Code заточений під моделі Claude; локальні 7–32B помітно гірше тримають агентні цикли (виклик інструментів, багатокрокові правки), немає prompt-кешування, усе повільніше. Для серйозного кодингу це радше експеримент / приватний фолбек, ніж заміна.</div>
+
+<h3>Ключові змінні оточення</h3>
+<table>
+  <tr><th>Змінна</th><th>Призначення</th></tr>
+  <tr><td><code>ANTHROPIC_BASE_URL</code></td><td>Куди слати запити (ваш локальний ендпойнт замість api.anthropic.com)</td></tr>
+  <tr><td><code>ANTHROPIC_AUTH_TOKEN</code></td><td>Токен у заголовку Authorization (для локалі — будь-яке значення, напр. <code>ollama</code>)</td></tr>
+  <tr><td><code>ANTHROPIC_API_KEY</code></td><td>API-ключ; для локалі лишають порожнім</td></tr>
+  <tr><td><code>ANTHROPIC_MODEL</code></td><td>Назва моделі за замовчуванням</td></tr>
+</table>
+<p class="small">Пріоритет: прапорці CLI &gt; змінні оточення &gt; <code>~/.claude/settings.json</code>. Точні назви й поведінку звіряйте з офіційною docs-сторінкою env-змінних <span class="cite">[11]</span> — вони можуть змінюватися між версіями.</p>
+
+<h3>Проблема сумісності API (важливо розуміти)</h3>
+<p>Claude Code говорить у форматі <strong>Anthropic Messages API</strong>, а «класичний» Ollama-ендпойнт <code>/v1</code> — це <strong>OpenAI-формат</strong>. Це різні протоколи, тому є два шляхи:</p>
+<h4>Шлях A — Anthropic-сумісний ендпойнт Ollama</h4>
+<p>Свіжі версії Ollama додали <strong>Anthropic-сумісний API спеціально під Claude Code</strong> — тоді проксі не потрібен <span class="cite">[12]</span>. Орієнтовна конфігурація:</p>
+<pre><code># перевірте версію — потрібна свіжа збірка з підтримкою Anthropic API
+ollama --version
+
+export ANTHROPIC_BASE_URL=http://localhost:11434
+export ANTHROPIC_AUTH_TOKEN=ollama
+export ANTHROPIC_API_KEY=""
+export ANTHROPIC_MODEL=qwen2.5-coder:14b   # модель, яку ви вже завантажили
+claude</code></pre>
+<div class="box warn"><span class="label">Звірте перед використанням</span> Точний шлях ендпойнта й мінімальна версія Ollama для Anthropic-сумісності — звіряйте з документацією інтеграції Ollama↔Claude Code <span class="cite">[12]</span>. Якщо ваша версія цього ще не вміє — використайте Шлях B.</div>
+
+<h4>Шлях B — проксі-перекладач (найнадійніше для маршрутизації)</h4>
+<p>Окремий проксі перекладає Anthropic ⇄ OpenAI/Ollama і дозволяє <strong>мапити «тіри» Claude Code</strong> (haiku/sonnet/opus) на різні локальні моделі. Популярні інструменти <span class="cite">[13]</span>:</p>
+<ul>
+  <li><strong>claude-code-router</strong> (<code>github.com/musistudio/claude-code-router</code>) — легкий проксі, створений саме під Claude Code; маршрутизація за типом задачі, конфіг у <code>~/.claude-code-router/config.json</code>.</li>
+  <li><strong>LiteLLM Proxy</strong> (<code>docs.litellm.ai</code>) — зріліший AI-gateway на 100+ API, з обліком витрат і балансуванням; маршрути описуються у <code>config.yaml</code>, <code>api_base</code> вказує на Ollama. Тоді <code>ANTHROPIC_BASE_URL</code> = адреса проксі.</li>
+</ul>
+<p class="small">Концепт тірів: проксі дозволяє, напр., легкі фонові задачі (tier «haiku») віддавати малій швидкій моделі, а основну роботу — більшій. Без проксі Claude Code може намагатися використати дефолтні тіри для фонових викликів.</p>
+
+<h3>Офіційно підтримувані бекенди ≠ локальні проксі</h3>
+<p>Важлива відмінність. <strong>Офіційно</strong> Claude Code підтримує корпоративні бекенди з власними прапорцями: <strong>Amazon Bedrock</strong> (<code>CLAUDE_CODE_USE_BEDROCK=1</code>) та <strong>Google Vertex AI</strong> (<code>CLAUDE_CODE_USE_VERTEX=1</code>) — але це все одно <em>моделі Claude</em>, просто через іншого хмарного провайдера. Запуск на <strong>локальній Ollama</strong> — це <em>не</em> офіційний «провайдер», а спрямування на сумісний ендпойнт; підтримки якості inference тут ніхто не гарантує.</p>
+
+<h3>Застереження (читати обов'язково)</h3>
+<ul>
+  <li><strong>Виклик інструментів ненадійний:</strong> малі моделі часто повертають криво форматований tool-call, плутаються в параметрах, зациклюються. Беріть моделі, явно треновані під tool use / кодинг (<code>qwen2.5-coder</code> та подібні великі), не дрібні застарілі.</li>
+  <li><strong>Немає prompt-кешування:</strong> це фіча Anthropic API. Локально кожен крок переобробляє весь контекст — повільніше й «дорожче» по токенах.</li>
+  <li><strong>Контекстне вікно:</strong> агентні цикли Claude Code жадібні до контексту. Тримайте якомога більший <code>num_ctx</code>; на 24 ГБ це конфліктує з розміром моделі — компроміс між моделлю й довжиною контексту.</li>
+  <li><strong>Швидкість:</strong> локально — десятки ток/с проти сотень у хмарного Claude; складні багатофайлові сесії відчуватимуться повільними.</li>
+  <li><strong>ToS:</strong> використання Claude Code з іншими/локальними моделями не заборонено; типове обмеження — не використовувати вихід Claude для тренування конкурентної моделі. Ліцензії самих open-моделей (Qwen, GLM тощо) перевіряйте окремо.</li>
+</ul>
+<div class="box tip"><span class="label">Прагматична порада</span> Для реального кодингу залиште Claude Code на хмарному Claude, а локальну Ollama-модель використовуйте через <strong>Open WebUI</strong> (розділи вище) або плагін <strong>Continue.dev</strong> у редакторі. Підключення Ollama до Claude Code варте уваги для приватних/офлайн-сценаріїв і експериментів, але не очікуйте паритету з хмарним Claude.</div>
+
+<h2 id="refs">Джерела та методологія</h2>
+<p class="small">Факти, позначені <span class="cite">[n]</span>, вилучено з першоджерел і перевірено 3-голосною adversarial-верифікацією (твердження «вбивається», якщо ≥2/3 рецензентів його спростовують). З 25 перевірених тверджень 23 підтверджено, 2 відсіяно (їх у звіті подано як спірні). Решта матеріалу — стабільне фахове знання домену.</p>
+<ol class="refs">
+  <li>Open WebUI Docs — Quick Start (Docker/all-in-one, порти) · <code>docs.openwebui.com/getting-started/quick-start/</code></li>
+  <li>Open WebUI Docs — RAG (контекст, embeddings, # у чаті) · <code>docs.openwebui.com/features/chat-conversations/rag/</code></li>
+  <li>Open WebUI Docs — Knowledge / Vector DB · <code>docs.openwebui.com/features/workspace/knowledge/</code></li>
+  <li>Open WebUI Docs — Hardening (signup, JWT/Redis, offline) · <code>docs.openwebui.com/getting-started/advanced-topics/hardening/</code></li>
+  <li>Open WebUI Docs — RAG Troubleshooting (chunk/Top-K) · <code>docs.openwebui.com/troubleshooting/rag/</code></li>
+  <li>Open WebUI — GitHub (pip-install, RAG, інтеграції) · <code>github.com/open-webui/open-webui</code></li>
+  <li>Cato Networks / Cato CTRL — вразливість Open WebUI (CVE-2025-64496) · <code>catonetworks.com/blog</code></li>
+  <li>GitLab Advisories — CVE-2026-44563 (missing authorization, fix 0.9.0) · <code>advisories.gitlab.com/pypi/open-webui/CVE-2026-44563/</code></li>
+  <li>The Hacker News — Ollama OOB read «Bleeding Llama» (CVE-2026-7482) · <code>thehackernews.com/2026/05/</code></li>
+  <li>willitrunai — сумісність моделей з M4 Pro 24GB (RAM, tok/s) · <code>willitrunai.com/macs/m4-pro-24gb</code></li>
+  <li>Claude Code — Environment variables &amp; Settings (офіційна дока) · <code>code.claude.com/docs/en/env-vars</code>, <code>/settings</code></li>
+  <li>Ollama ↔ Claude Code — інтеграція / Anthropic-сумісний API · <code>docs.ollama.com/integrations/claude-code</code>, <code>ollama.com/blog/claude</code></li>
+  <li>Проксі-перекладачі: claude-code-router · <code>github.com/musistudio/claude-code-router</code> · LiteLLM · <code>docs.litellm.ai</code></li>
+</ol>
+<p class="small"><strong>Застереження щодо джерел.</strong> Дані про tok/s з агрегаторів-лідербордів слід сприймати орієнтовно — деякі такі сайти містять синтетичний/спекулятивний контент; цифри в цьому звіті відібрано як правдоподібні й узгоджені між джерелами, але точні заміри робіть на власному залізі. CVE й версії перевіряйте в офіційних трекерах перед прийняттям рішень.</p>
+
+<footer>
+  <strong>Звіт:</strong> «Локальний запуск LLM: Ollama + Open WebUI на Apple Silicon». Укладено під конфігурацію MacBook Pro M4 Pro / 24 ГБ / macOS 15.1. ·
+  Першоджерела для звірки версій: <code>github.com/ollama/ollama</code>, <code>github.com/open-webui/open-webui</code>, <code>ollama.com/library</code> (каталог моделей). ·
+  Технічні факти (квантизація, обсяги пам'яті, поведінка Metal) стабільні; конкретні теги моделей і прапорці CLI можуть змінюватися — звіряйте перед використанням.
+</footer>
+
+</div>
+</body>
+</html>
