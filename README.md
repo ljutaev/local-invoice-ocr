@@ -1,52 +1,52 @@
 # local-invoice-ocr
 
-Повністю **локальна** обробка інвойсів: читає PDF/скани, витягує структуровані дані
-локальною LLM, оцінює впевненість за правилами і зберігає все **зашифрованим** у SQLite.
-Жоден байт не залишає машину — обробка йде на вашому Mac (Apple Silicon).
+Fully **local** invoice processing: reads PDFs/scans, extracts structured data with a
+local LLM, scores confidence with rules, and stores everything **encrypted** in SQLite.
+Nothing leaves the machine — all processing runs on your Mac (Apple Silicon).
 
-> Статус: **Фаза 1 (MVP)** — наскрізний конвеєр `ingest → reader → extractor → validator → store` + CLI. 20 тестів зелені.
-> Наступні фази: Review UI (Фаза 2), email-приймач + експорт у зовнішню систему (Фаза 3).
+> Status: **Phase 1 (MVP)** — end-to-end pipeline `ingest → reader → extractor → validator → store` + CLI. 20 tests passing.
+> Next: Review UI (Phase 2), email intake + export to an external system (Phase 3).
 
 ---
 
-## Як це працює
+## How it works
 
 ```
-тека-приймач ─▶ ingest ─▶ черга ─▶ worker ─▶ reader ─▶ extractor ─▶ validator ─▶ store ─▶ (Review UI / export)
-               hash+дедуп   (SQLite)          PDF/OCR    Ollama JSON    впевненість   SQLite+шифр.
-               шифрує файл                                                            needs_review
+inbox folder ─▶ ingest ─▶ queue ─▶ worker ─▶ reader ─▶ extractor ─▶ validator ─▶ store ─▶ (Review UI / export)
+                hash+dedup  (SQLite)          PDF/OCR    Ollama JSON   confidence   SQLite+encrypt
+                encrypt file                                                          needs_review
 ```
 
-| Стадія | Що робить |
+| Stage | What it does |
 |---|---|
-| **ingest** | SHA-256 + дедуп, шифрує оригінал (AES-256-GCM), створює job |
-| **queue** | атомарне захоплення job із SQLite (WAL) |
-| **reader** | цифровий PDF → текст (PyMuPDF); скан/фото → Tesseract OCR |
-| **extractor** | текст → строгий JSON за схемою інвойсу через локальну Ollama |
-| **validator** | впевненість **за правилами**: арифметика (Σ позицій = subtotal, subtotal+tax = total), парсинг дат/чисел, **grounding** (значення дослівно є в тексті — захист від галюцинацій), обов'язкові поля |
-| **store** | SQLite; чутливі поля та оригінали зашифровані, ключ у macOS Keychain; `audit_log` |
+| **ingest** | SHA-256 + dedup, encrypts the original (AES-256-GCM), creates a job |
+| **queue** | atomic job claim from SQLite (WAL) |
+| **reader** | digital PDF → text (PyMuPDF); scan/photo → Tesseract OCR |
+| **extractor** | text → strict invoice-schema JSON via a local Ollama model |
+| **validator** | rule-based confidence: arithmetic (Σ line items = subtotal, subtotal+tax = total), date/number parsing, **grounding** (value appears verbatim in the source text — anti-hallucination), required fields |
+| **store** | SQLite; sensitive fields and originals encrypted, key in macOS Keychain; `audit_log` |
 
-Поля, що не пройшли перевірки, позначаються `low` — їх видно у списку (а у Фазі 2 — підсвічуватимуться в side-by-side перегляді).
+Fields that fail the checks are flagged `low` — visible in the list now, and highlighted in the side-by-side review (Phase 2).
 
-## Приватність
+## Privacy
 
-- **Локально:** мережево лише `localhost` (Ollama).
-- **At rest:** оригінали-файли та чутливі поля в БД зашифровані AES-256-GCM; майстер-ключ — у **macOS Keychain**, не в репозиторії.
-- **Аудит:** `audit_log` фіксує хто/що/коли (значення зашифровані).
-- `.gitignore` виключає БД і тимчасові файли; ключі ніколи не комітяться.
+- **Local only:** network access is `localhost` (Ollama) only.
+- **At rest:** original files and sensitive DB fields are AES-256-GCM encrypted; the master key lives in the **macOS Keychain**, never in the repo.
+- **Audit:** `audit_log` records who/what/when (values encrypted).
+- `.gitignore` excludes the DB and temp files; keys are never committed.
 
-## Вимоги
+## Requirements
 
-- macOS (Apple Silicon рекомендовано)
-- **Python 3.11+** (тестовано на 3.12)
+- macOS (Apple Silicon recommended)
+- **Python 3.11+** (tested on 3.12)
 - **Tesseract** (`brew install tesseract`)
-- **Ollama** з моделлю для витягування (напр. `qwen2.5:14b`) — для реального запуску extractor
+- **Ollama** with an extraction model (e.g. `qwen2.5:14b`) — required to actually run the extractor
 
-## Встановлення
+## Installation
 
 ```bash
 brew install tesseract
-# Python 3.12 (якщо системний несумісний з wheel'ами залежностей):
+# Python 3.12 (if your system Python lacks wheels for the deps):
 brew install python@3.12
 
 git clone https://github.com/ljutaev/local-invoice-ocr.git
@@ -55,64 +55,64 @@ cd local-invoice-ocr
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# модель для витягування
+# extraction model
 ollama pull qwen2.5:14b
 ```
 
-## Використання
+## Usage
 
 ```bash
-# 1. покласти інвойси у теку-приймач
+# 1. drop invoices into the inbox
 mkdir -p ~/.invoiceflow/inbox
 cp invoice1.pdf scan2.jpg ~/.invoiceflow/inbox/
 
-# 2. підхопити нові файли у чергу (фоновий watcher)
+# 2. pick up new files into the queue (background watcher)
 invoiceflow watch &
 
-# 3. обробити чергу
-invoiceflow work --once        # один прохід; без --once — безперервно
+# 3. process the queue
+invoiceflow work --once        # single pass; omit --once to run continuously
 
-# 4. переглянути результати
-invoiceflow list                       # усі
-invoiceflow list --status needs_review # лише ті, що потребують перевірки
+# 4. inspect results
+invoiceflow list                       # all
+invoiceflow list --status needs_review # only those needing review
 ```
 
-## Конфігурація (змінні оточення)
+## Configuration (environment variables)
 
-| Змінна | За замовчуванням | Опис |
+| Variable | Default | Description |
 |---|---|---|
-| `INVOICEFLOW_HOME` | `~/.invoiceflow` | базова тека (inbox, store, БД) |
-| `OLLAMA_URL` | `http://localhost:11434` | адреса Ollama |
-| `INVOICEFLOW_MODEL` | `qwen2.5:14b` | модель витягування |
-| `INVOICEFLOW_OCR_LANG` | `eng` | мова Tesseract |
-| `INVOICEFLOW_TEXT_THRESHOLD` | `100` | мін. символів/сторінку, щоб вважати PDF цифровим (інакше OCR) |
-| `INVOICEFLOW_MAX_ATTEMPTS` | `3` | спроби обробки job |
+| `INVOICEFLOW_HOME` | `~/.invoiceflow` | base dir (inbox, store, DB) |
+| `OLLAMA_URL` | `http://localhost:11434` | Ollama address |
+| `INVOICEFLOW_MODEL` | `qwen2.5:14b` | extraction model |
+| `INVOICEFLOW_OCR_LANG` | `eng` | Tesseract language |
+| `INVOICEFLOW_TEXT_THRESHOLD` | `100` | min chars/page to treat a PDF as digital (else OCR) |
+| `INVOICEFLOW_MAX_ATTEMPTS` | `3` | job processing attempts |
 
-## Структура проєкту
+## Project layout
 
 ```
-invoiceflow/        пакет
-  config.py         налаштування
-  crypto.py         AES-256-GCM + ключ із Keychain
+invoiceflow/        package
+  config.py         settings
+  crypto.py         AES-256-GCM + Keychain key
   db.py models.py   SQLite (WAL) + ORM
-  schema.py         pydantic-схема інвойсу + JSON-схема для Ollama
-  store.py queue.py зберігання + черга
+  schema.py         pydantic invoice schema + JSON schema for Ollama
+  store.py queue.py persistence + queue
   ingest.py reader.py extractor.py validator.py worker.py
   cli.py            watch / work / list
-tests/              pytest (20 тестів)
-docs/superpowers/   дизайн-документ + план впровадження
+tests/              pytest (20 tests)
+docs/superpowers/   design doc + implementation plan
 ```
 
-## Тести
+## Tests
 
 ```bash
 source .venv/bin/activate
 pytest            # 20 passed
 ```
-Юніт-тести мокають Ollama та Tesseract, тож проходять без них; повний наскрізний прогін потребує запущеного Ollama з моделлю.
+Unit tests mock Ollama and Tesseract, so they pass without them; a full end-to-end run requires a running Ollama with the model.
 
-## Дорожня карта
+## Roadmap
 
-- [x] **Фаза 1** — конвеєр ingest→store + CLI (поточна)
-- [ ] **Фаза 2** — Review UI (FastAPI + PDF.js): оригінал ↔ поля, підсвітка низької впевненості, редагування, approve, audit; веб-завантаження
-- [ ] **Фаза 3** — email-приймач (IMAP) + `Exporter` (CSV/JSON → ERP/API)
+- [x] **Phase 1** — ingest→store pipeline + CLI (current)
+- [ ] **Phase 2** — Review UI (FastAPI + PDF.js): original ↔ fields, low-confidence highlighting, editing, approve, audit; web upload
+- [ ] **Phase 3** — email intake (IMAP) + `Exporter` (CSV/JSON → ERP/API)
