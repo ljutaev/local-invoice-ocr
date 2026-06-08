@@ -1,28 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Invoices</h1>
-<form action="/submit" method="post" enctype="multipart/form-data" class="intake">
-  <p><strong>Add one email</strong> — paste its body text and attach its file (processed together as one item):</p>
-  <textarea name="text" rows="5" placeholder="Paste the email body text here (optional)"></textarea>
-  <p>
-    <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg">
-    <button type="submit">Add to queue</button>
-  </p>
-  <p class="hint">Text + attachment from the same email become a single record. Then run <code>invoiceflow work</code> to process. (Email automation comes later.)</p>
-</form>
-<p class="filters">
-  <a href="/">all</a> ·
-  <a href="/?status=needs_review">needs review</a> ·
-  <a href="/?status=verified">verified</a>
-</p>
-<table>
-  <tr><th>#</th><th>Invoice</th><th>Vendor</th><th>Total</th><th>Status</th><th>Confidence</th></tr>
-  {% for r in rows %}
-  <tr class="{{ 'low' if r.summary == 'low' else '' }}">
-    <td><a href="/invoice/{{ r.id }}">{{ r.id }}</a></td>
-    <td>{{ r.invoice_number }}</td><td>{{ r.vendor }}</td><td>{{ r.total }}</td>
-    <td>{{ r.status }}</td><td>{{ r.summary }}</td>
-  </tr>
-  {% endfor %}
-</table>
+<p class="page-sub">Documents ingested locally — review, edit, and approve before export.</p>
+
+<div class="card">
+  <p class="card-title">Add one email</p>
+  <form action="/submit" method="post" enctype="multipart/form-data" class="intake">
+    <textarea name="text" placeholder="Paste the email body text here (optional)"></textarea>
+    <div class="row">
+      <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg">
+      <span class="spacer" style="flex:1"></span>
+      <button type="submit" class="btn btn-primary">Add to queue</button>
+    </div>
+    <p class="hint">Text + attachment from the same email become a single record. Then run <code>invoiceflow work</code> to process.</p>
+  </form>
+</div>
+
+<div class="tabs">
+  <a href="/" class="{{ 'active' if not status else '' }}">All</a>
+  <a href="/?status=needs_review" class="{{ 'active' if status == 'needs_review' else '' }}">Needs review</a>
+  <a href="/?status=verified" class="{{ 'active' if status == 'verified' else '' }}">Verified</a>
+</div>
+
+<div class="card" style="padding:0">
+  <table>
+    <thead>
+      <tr><th>#</th><th>Invoice</th><th>Vendor</th><th>Total</th><th>Status</th><th>Confidence</th></tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="num">{{ r.id }}</td>
+        <td><a href="/invoice/{{ r.id }}">{{ r.invoice_number or '—' }}</a></td>
+        <td>{{ r.vendor or '—' }}</td>
+        <td class="num">{{ r.total if r.total is not none else '—' }}</td>
+        <td>
+          {% if r.status == 'verified' %}<span class="badge badge-verified">verified</span>
+          {% elif r.status == 'failed' %}<span class="badge badge-failed">failed</span>
+          {% else %}<span class="badge badge-review">needs review</span>{% endif %}
+        </td>
+        <td>
+          {% if r.summary == 'high' %}<span class="badge badge-high">high</span>
+          {% elif r.summary == 'low' %}<span class="badge badge-low">low</span>
+          {% else %}<span class="badge">{{ r.summary or '—' }}</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    {% if not rows %}
+      <tr><td colspan="6" style="color:var(--muted-foreground); text-align:center; padding:28px">No documents yet — add one above.</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

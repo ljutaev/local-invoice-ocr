@@ -1,10 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
-<p><a href="/">← back</a> · invoice #{{ inv.id }} · status: {{ inv.status }} ·
-  <a href="/invoice/{{ inv.id }}/pdf">⬇ Download PDF (for CargoWise)</a></p>
-<p class="hint">Click a field to highlight where it appears on the document.</p>
+<div class="crumbs">
+  <a href="/" class="btn btn-ghost btn-sm">← Back</a>
+  <span class="sep">/</span>
+  <strong>Invoice #{{ inv.id }}</strong>
+  {% if inv.status == 'verified' %}<span class="badge badge-verified">verified</span>
+  {% elif inv.status == 'failed' %}<span class="badge badge-failed">failed</span>
+  {% else %}<span class="badge badge-review">needs review</span>{% endif %}
+  <span class="spacer" style="flex:1"></span>
+  <a href="/invoice/{{ inv.id }}/pdf" class="btn btn-secondary btn-sm">⬇ Download PDF (for CargoWise)</a>
+</div>
+<p class="hint" style="margin-bottom:14px">Click a field to highlight where it appears on the document.</p>
+
 <div class="split">
-  <div class="doc" id="doc">
+  <div class="card doc" id="doc" style="padding:8px">
     {% for pg in layout.pages %}
     <div class="page" data-page="{{ loop.index0 }}" data-w="{{ pg.w }}" data-h="{{ pg.h }}">
       <img src="/invoice/{{ inv.id }}/page/{{ loop.index0 }}.png" alt="page {{ loop.index0 }}">
@@ -15,7 +24,8 @@
       <iframe src="/invoice/{{ inv.id }}/file"></iframe>
     {% endif %}
   </div>
-  <form method="post" action="/invoice/{{ inv.id }}">
+
+  <form method="post" action="/invoice/{{ inv.id }}" class="card">
     {% macro field(name, value) %}
       {% set fl = flags.get(name) %}
       <div class="field {{ 'low' if fl and fl.confidence == 'low' else '' }}">
@@ -25,28 +35,39 @@
       </div>
     {% endmacro %}
     {{ field('invoice_number', fields.invoice_number) }}
-    {{ field('invoice_date', fields.invoice_date) }}
-    {{ field('due_date', fields.due_date) }}
+    <div class="grid2">
+      {{ field('invoice_date', fields.invoice_date) }}
+      {{ field('due_date', fields.due_date) }}
+    </div>
     <div class="field {{ 'low' if flags.get('vendor_name') and flags.get('vendor_name').confidence == 'low' else '' }}">
       <label>vendor_name</label>
       <input name="vendor_name" value="{{ fields.vendor.name }}">
     </div>
-    <div class="field"><label>vendor_address</label>
-      <input name="vendor_address" value="{{ fields.vendor.address }}"></div>
-    <div class="field"><label>vendor_tax_id</label>
-      <input name="vendor_tax_id" value="{{ fields.vendor.tax_id }}"></div>
-    {{ field('buyer_name', fields.buyer_name) }}
-    {{ field('currency', fields.currency) }}
-    {{ field('subtotal', fields.subtotal) }}
-    {{ field('tax', fields.tax) }}
+    <div class="grid2">
+      <div class="field"><label>vendor_address</label>
+        <input name="vendor_address" value="{{ fields.vendor.address }}"></div>
+      <div class="field"><label>vendor_tax_id</label>
+        <input name="vendor_tax_id" value="{{ fields.vendor.tax_id }}"></div>
+    </div>
+    <div class="grid2">
+      {{ field('buyer_name', fields.buyer_name) }}
+      {{ field('currency', fields.currency) }}
+    </div>
+    <div class="grid2">
+      {{ field('subtotal', fields.subtotal) }}
+      {{ field('tax', fields.tax) }}
+    </div>
     {{ field('total', fields.total) }}
-    {{ field('po_number', fields.po_number) }}
-    {{ field('payment_terms', fields.payment_terms) }}
+    <div class="grid2">
+      {{ field('po_number', fields.po_number) }}
+      {{ field('payment_terms', fields.payment_terms) }}
+    </div>
 
     {% if fields.line_items %}
     <h3>Line items</h3>
     <table>
-      <tr><th>Description</th><th>Qty</th><th>Unit</th><th>Amount</th></tr>
+      <thead><tr><th>Description</th><th>Qty</th><th>Unit</th><th>Amount</th></tr></thead>
+      <tbody>
       {% for li in fields.line_items %}
       <tr>
         <td><input name="li_{{ loop.index0 }}_description" value="{{ li.description }}"></td>
@@ -55,13 +76,14 @@
         <td><input name="li_{{ loop.index0 }}_amount" value="{{ li.amount if li.amount is not none else '' }}"></td>
       </tr>
       {% endfor %}
+      </tbody>
     </table>
     {% endif %}
 
-    <p style="margin-top:14px">
-      <button type="submit">Save</button>
-      <button type="submit" formaction="/invoice/{{ inv.id }}/approve" class="approve">Approve</button>
-    </p>
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <button type="submit" formaction="/invoice/{{ inv.id }}/approve" class="btn btn-success">Approve</button>
+    </div>
   </form>
 </div>
 
