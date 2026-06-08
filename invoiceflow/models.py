@@ -45,6 +45,7 @@ class Invoice(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     verified_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    exported_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class AuditLog(Base):

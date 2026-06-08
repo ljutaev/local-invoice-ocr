@@ -34,12 +34,16 @@
     {{ field('payment_terms', fields.payment_terms) }}
 
     {% if fields.line_items %}
-    <h3>Line items (read-only)</h3>
+    <h3>Line items</h3>
     <table>
       <tr><th>Description</th><th>Qty</th><th>Unit</th><th>Amount</th></tr>
       {% for li in fields.line_items %}
-      <tr><td>{{ li.description }}</td><td>{{ li.qty }}</td>
-          <td>{{ li.unit_price }}</td><td>{{ li.amount }}</td></tr>
+      <tr>
+        <td><input name="li_{{ loop.index0 }}_description" value="{{ li.description }}"></td>
+        <td><input name="li_{{ loop.index0 }}_qty" value="{{ li.qty if li.qty is not none else '' }}"></td>
+        <td><input name="li_{{ loop.index0 }}_unit_price" value="{{ li.unit_price if li.unit_price is not none else '' }}"></td>
+        <td><input name="li_{{ loop.index0 }}_amount" value="{{ li.amount if li.amount is not none else '' }}"></td>
+      </tr>
       {% endfor %}
     </table>
     {% endif %}

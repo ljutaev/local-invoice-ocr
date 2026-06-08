@@ -52,6 +52,10 @@ def main() -> None:
     sv = sub.add_parser("serve")
     sv.add_argument("--host", default="127.0.0.1")
     sv.add_argument("--port", type=int, default=8000)
+    ex = sub.add_parser("export")
+    ex.add_argument("--format", choices=["csv", "json"], default="csv")
+    ex.add_argument("--out", required=True)
+    sub.add_parser("fetch-email")
     args = parser.parse_args()
 
     settings = get_settings()
@@ -68,6 +72,14 @@ def main() -> None:
         import uvicorn
         from invoiceflow.webapp import create_app
         uvicorn.run(create_app(settings), host=args.host, port=args.port)
+    elif args.cmd == "export":
+        from invoiceflow import exporter
+        n = exporter.export_verified(args.out, fmt=args.format)
+        print(f"exported {n} invoice(s) -> {args.out}")
+    elif args.cmd == "fetch-email":
+        from invoiceflow.email_source import EmailSource
+        jids = EmailSource(settings).fetch_new()
+        print(f"ingested {len(jids)} attachment(s) from email")
 
 
 if __name__ == "__main__":

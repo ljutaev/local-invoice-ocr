@@ -4,8 +4,8 @@ Fully **local** invoice processing: reads PDFs/scans, extracts structured data w
 local LLM, scores confidence with rules, and stores everything **encrypted** in SQLite.
 Nothing leaves the machine — all processing runs on your Mac (Apple Silicon).
 
-> Status: **Phases 1–2 complete** — end-to-end pipeline (`ingest → reader → extractor → validator → store`) + a local web Review UI (side-by-side review, edit, approve, upload). 31 tests passing.
-> Next: email intake + export to an external system (Phase 3).
+> Status: **Phases 1–3 complete** — pipeline (`ingest → reader → extractor → validator → store`), local web Review UI (side-by-side review, edit incl. line items, approve, upload), email intake (IMAP), CSV/JSON export, auto-retry, and a launchd service. 38 tests passing.
+> Remaining enhancements: a concrete ERP/API export adapter (depends on the target system) and OCR region overlay in the UI.
 
 ---
 
@@ -78,7 +78,16 @@ invoiceflow list --status needs_review # only those needing review
 
 # 5. review in the browser (side-by-side, edit, approve, upload)
 invoiceflow serve                      # http://127.0.0.1:8000
+
+# 6. pull invoices from email (IMAP) — needs INVOICEFLOW_IMAP_* env vars
+invoiceflow fetch-email
+
+# 7. export verified invoices for the downstream system
+invoiceflow export --format csv --out invoices.csv
+invoiceflow export --format json --out invoices.json
 ```
+
+Run the worker continuously as a background service — see [`service/README.md`](service/README.md) (launchd).
 
 ### Review UI
 
@@ -98,7 +107,9 @@ Documents are decrypted in memory and rendered with the browser's native PDF/ima
 | `INVOICEFLOW_MODEL` | `qwen2.5:14b` | extraction model |
 | `INVOICEFLOW_OCR_LANG` | `eng` | Tesseract language |
 | `INVOICEFLOW_TEXT_THRESHOLD` | `100` | min chars/page to treat a PDF as digital (else OCR) |
-| `INVOICEFLOW_MAX_ATTEMPTS` | `3` | job processing attempts |
+| `INVOICEFLOW_MAX_ATTEMPTS` | `3` | job attempts before a failure is final (auto-retry) |
+| `INVOICEFLOW_IMAP_HOST` / `_USER` / `_PASS` | `""` | IMAP credentials for `fetch-email` |
+| `INVOICEFLOW_IMAP_FOLDER` | `INBOX` | mailbox to scan for unseen invoices |
 
 ## Project layout
 
@@ -127,4 +138,5 @@ Unit tests mock Ollama and Tesseract, so they pass without them; a full end-to-e
 
 - [x] **Phase 1** — ingest→store pipeline + CLI
 - [x] **Phase 2** — Review UI (FastAPI): side-by-side original ↔ fields, low-confidence highlighting, editing, approve, audit; web upload
-- [ ] **Phase 3** — email intake (IMAP) + `Exporter` (CSV/JSON → ERP/API); plus enhancements: OCR region overlay, per-line-item editing
+- [x] **Phase 3** — email intake (IMAP), CSV/JSON export, auto-retry, line-item editing, launchd service
+- [ ] **Later** — concrete ERP/API export adapter (target-dependent); OCR region overlay (click field → highlight region on the document)

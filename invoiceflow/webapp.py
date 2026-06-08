@@ -19,6 +19,11 @@ _EDIT_FIELDS = ["invoice_number", "invoice_date", "due_date", "buyer_name",
 _NUMERIC = {"subtotal", "tax", "total"}
 
 
+def _to_float(v):
+    v = (v or "").strip()
+    return float(v) if v else None
+
+
 def create_app(settings: Settings) -> FastAPI:
     ensure_dirs(settings)
     init_db(settings)
@@ -65,6 +70,21 @@ def create_app(settings: Settings) -> FastAPI:
             "address": (form.get("vendor_address") or "").strip(),
             "tax_id": (form.get("vendor_tax_id") or "").strip(),
         }
+        li_keys = [k for k in form.keys() if k.startswith("li_")]
+        if li_keys:
+            items: dict[int, dict] = {}
+            for k in li_keys:
+                _, idx, fld = k.split("_", 2)
+                items.setdefault(int(idx), {})[fld] = (form.get(k) or "").strip()
+            data["line_items"] = [
+                {
+                    "description": items[i].get("description", ""),
+                    "qty": _to_float(items[i].get("qty")),
+                    "unit_price": _to_float(items[i].get("unit_price")),
+                    "amount": _to_float(items[i].get("amount")),
+                }
+                for i in sorted(items)
+            ]
         store.update_invoice_fields(invoice_id, InvoiceFields(**data), _USER)
         return RedirectResponse(f"/invoice/{invoice_id}", status_code=303)
 

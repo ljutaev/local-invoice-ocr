@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 from invoiceflow import worker, store, ingest, reader, extractor, validator, models
@@ -35,7 +36,8 @@ def test_process_job_marks_failed_on_extractor_error(db, settings, monkeypatch):
     def boom(text, s): raise extractor.ExtractionError("nope")
     monkeypatch.setattr(extractor, "extract_fields", boom)
 
-    worker.process_job(jid, settings, worker_id="w1")
+    # max_attempts=1 → a single failure goes straight to FAILED (no retry)
+    worker.process_job(jid, replace(settings, max_attempts=1), worker_id="w1")
     with SessionLocal() as s:
         assert s.get(Job, jid).status == models.FAILED
         assert "nope" in s.get(Job, jid).error

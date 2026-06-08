@@ -112,3 +112,25 @@ def get_original_bytes(invoice_id: int) -> tuple[bytes, str]:
         data = crypto.decrypt(enc)
         ext = Path(job.source_ref).suffix.lower()
     return data, _MEDIA.get(ext, "application/octet-stream")
+
+
+def list_verified_unexported() -> list[dict]:
+    with SessionLocal() as s:
+        rows = s.query(Invoice).filter(
+            Invoice.status == VERIFIED, Invoice.exported_at.is_(None)
+        ).order_by(Invoice.verified_at).all()
+        out = []
+        for inv in rows:
+            f = InvoiceFields.model_validate_json(crypto.decrypt_str(inv.enc_fields))
+            out.append({"id": inv.id, "fields": f})
+        return out
+
+
+def mark_exported(ids: list[int]) -> None:
+    now = datetime.now(timezone.utc)
+    with SessionLocal() as s:
+        for iid in ids:
+            inv = s.get(Invoice, iid)
+            if inv:
+                inv.exported_at = now
+        s.commit()

@@ -14,6 +14,10 @@ class Settings:
     ocr_lang: str
     text_threshold: int      # min chars/page to treat PDF as digital
     max_attempts: int
+    imap_host: str
+    imap_user: str
+    imap_pass: str
+    imap_folder: str
 
 
 def get_settings(base: str | None = None) -> Settings:
@@ -28,6 +32,10 @@ def get_settings(base: str | None = None) -> Settings:
         ocr_lang=os.environ.get("INVOICEFLOW_OCR_LANG", "eng"),
         text_threshold=int(os.environ.get("INVOICEFLOW_TEXT_THRESHOLD", "100")),
         max_attempts=int(os.environ.get("INVOICEFLOW_MAX_ATTEMPTS", "3")),
+        imap_host=os.environ.get("INVOICEFLOW_IMAP_HOST", ""),
+        imap_user=os.environ.get("INVOICEFLOW_IMAP_USER", ""),
+        imap_pass=os.environ.get("INVOICEFLOW_IMAP_PASS", ""),
+        imap_folder=os.environ.get("INVOICEFLOW_IMAP_FOLDER", "INBOX"),
     )
 
 

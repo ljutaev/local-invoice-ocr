@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import sessionmaker
 
 from invoiceflow.config import Settings, ensure_dirs
@@ -22,6 +22,13 @@ def init_db(settings: Settings):
         cur.close()
 
     Base.metadata.create_all(_engine)
+
+    # lightweight migration: add columns introduced after a DB was first created
+    cols = [c["name"] for c in inspect(_engine).get_columns("invoices")]
+    if "exported_at" not in cols:
+        with _engine.begin() as conn:
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN exported_at DATETIME"))
+
     SessionLocal.configure(bind=_engine, future=True)
     return _engine
 

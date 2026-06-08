@@ -4,7 +4,7 @@ from pathlib import Path
 from invoiceflow import crypto, extractor, reader, store, validator
 from invoiceflow.config import Settings
 from invoiceflow.db import SessionLocal
-from invoiceflow.models import DONE, FAILED, Job
+from invoiceflow.models import DONE, FAILED, PENDING, Job
 
 
 def process_job(job_id: int, settings: Settings, worker_id: str = "w1") -> None:
@@ -12,6 +12,7 @@ def process_job(job_id: int, settings: Settings, worker_id: str = "w1") -> None:
         job = s.get(Job, job_id)
         enc_path, source_ref = job.enc_file_path, job.source_ref
         job.attempts += 1
+        attempts = job.attempts
         s.commit()
     try:
         data = crypto.decrypt(Path(enc_path).read_bytes())
@@ -21,7 +22,10 @@ def process_job(job_id: int, settings: Settings, worker_id: str = "w1") -> None:
         store.save_invoice(job_id, fields, flags, summary)
         _finish(job_id, DONE, None)
     except Exception as e:  # noqa: BLE001 — record and surface in UI
-        _finish(job_id, FAILED, str(e))
+        if attempts < settings.max_attempts:
+            _requeue(job_id, f"retry after error: {e}")
+        else:
+            _finish(job_id, FAILED, str(e))
 
 
 def _finish(job_id: int, status: str, error: str | None) -> None:
@@ -30,4 +34,14 @@ def _finish(job_id: int, status: str, error: str | None) -> None:
         job.status = status
         job.error = error
         job.finished_at = datetime.now(timezone.utc)
+        s.commit()
+
+
+def _requeue(job_id: int, note: str) -> None:
+    with SessionLocal() as s:
+        job = s.get(Job, job_id)
+        job.status = PENDING
+        job.error = note
+        job.started_at = None
+        job.finished_at = None
         s.commit()
