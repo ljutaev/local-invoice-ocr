@@ -25,6 +25,7 @@ class Job(Base):
     source_ref: Mapped[str] = mapped_column(String(512))
     file_hash: Mapped[str] = mapped_column(String(64), index=True)
     enc_file_path: Mapped[str] = mapped_column(String(512))
+    enc_context: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)  # email body text
     status: Mapped[str] = mapped_column(String(16), default=PENDING, index=True)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     worker_id: Mapped[str | None] = mapped_column(String(64), nullable=True)

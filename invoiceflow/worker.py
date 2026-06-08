@@ -12,14 +12,19 @@ def process_job(job_id: int, settings: Settings, worker_id: str = "w1") -> None:
     with SessionLocal() as s:
         job = s.get(Job, job_id)
         enc_path, source_ref = job.enc_file_path, job.source_ref
+        enc_context = job.enc_context
         job.attempts += 1
         attempts = job.attempts
         s.commit()
     try:
         data = crypto.decrypt(Path(enc_path).read_bytes())
         rr = reader.read_document(data, source_ref, settings)
-        fields = extractor.extract_fields(rr.full_text, settings)
-        flags, summary = validator.validate(fields, rr.full_text)
+        # email body text (if any) is merged into the extraction/grounding source
+        text = rr.full_text
+        if enc_context:
+            text = crypto.decrypt_str(enc_context) + "\n\n" + rr.full_text
+        fields = extractor.extract_fields(text, settings)
+        flags, summary = validator.validate(fields, text)
         layout = {"pages": [{"w": p.width, "h": p.height, "words": p.words}
                             for p in rr.pages]}
         store.save_invoice(job_id, fields, flags, summary, layout_json=json.dumps(layout))

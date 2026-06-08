@@ -117,16 +117,18 @@ def create_app(settings: Settings) -> FastAPI:
 
     @app.post("/submit")
     async def submit(request: Request):
-        """Manual intake: pasted text and/or an attached file (interim, pre-email)."""
+        """Manual intake of ONE email: its body text and/or its attachment, as a
+        single combined item (interim, before email automation)."""
         form = await request.form()
         src = ingest.UploadSource(settings)
-        up = form.get("file")
-        if up is not None and getattr(up, "filename", ""):
-            data = await up.read()
-            if data:
-                src.ingest_bytes(data, up.filename)
         text = (form.get("text") or "").strip()
-        if text:
+        up = form.get("file")
+        file_bytes = await up.read() if (up is not None and getattr(up, "filename", "")) else b""
+        if file_bytes:
+            # attachment is the document; email text is merged in as context
+            src.ingest_bytes(file_bytes, up.filename, extra_text=text or None)
+        elif text:
+            # text-only email
             src.ingest_bytes(text.encode("utf-8"), "pasted.txt")
         return RedirectResponse("/", status_code=303)
 

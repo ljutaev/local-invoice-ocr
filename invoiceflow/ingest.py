@@ -9,13 +9,15 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _ingest_bytes(settings: Settings, source: str, source_ref: str, data: bytes) -> int | None:
+def _ingest_bytes(settings: Settings, source: str, source_ref: str, data: bytes,
+                  extra_text: str | None = None) -> int | None:
     digest = _sha256(data)
     if store.find_job_by_hash(digest) is not None:
         return None  # duplicate
     enc_path = settings.store_dir / f"{digest}.bin"
     enc_path.write_bytes(crypto.encrypt(data))
-    return store.create_job(source, source_ref, digest, str(enc_path))
+    enc_context = crypto.encrypt_str(extra_text) if extra_text else None
+    return store.create_job(source, source_ref, digest, str(enc_path), enc_context)
 
 
 class FolderSource:
@@ -35,5 +37,6 @@ class UploadSource:
     def __init__(self, settings: Settings):
         self.settings = settings
 
-    def ingest_bytes(self, data: bytes, filename: str) -> int | None:
-        return _ingest_bytes(self.settings, "upload", filename, data)
+    def ingest_bytes(self, data: bytes, filename: str,
+                     extra_text: str | None = None) -> int | None:
+        return _ingest_bytes(self.settings, "upload", filename, data, extra_text)

@@ -31,6 +31,10 @@ def init_db(settings: Settings):
     if "enc_layout" not in cols:
         with _engine.begin() as conn:
             conn.execute(text("ALTER TABLE invoices ADD COLUMN enc_layout BLOB"))
+    job_cols = [c["name"] for c in inspect(_engine).get_columns("jobs")]
+    if "enc_context" not in job_cols:
+        with _engine.begin() as conn:
+            conn.execute(text("ALTER TABLE jobs ADD COLUMN enc_context BLOB"))
 
     SessionLocal.configure(bind=_engine, future=True)
     return _engine

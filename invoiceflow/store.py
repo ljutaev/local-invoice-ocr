@@ -22,10 +22,11 @@ class LoadedInvoice:
     layout: dict | None = None
 
 
-def create_job(source: str, source_ref: str, file_hash: str, enc_file_path: str) -> int:
+def create_job(source: str, source_ref: str, file_hash: str, enc_file_path: str,
+               enc_context: bytes | None = None) -> int:
     with SessionLocal() as s:
-        job = Job(source=source, source_ref=source_ref,
-                  file_hash=file_hash, enc_file_path=enc_file_path)
+        job = Job(source=source, source_ref=source_ref, file_hash=file_hash,
+                  enc_file_path=enc_file_path, enc_context=enc_context)
         s.add(job)
         s.commit()
         return job.id

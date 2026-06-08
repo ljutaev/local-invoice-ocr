@@ -45,13 +45,37 @@ def test_submit_file_creates_job(client):
     assert store.find_job_by_hash(ingest._sha256(b"%PDF-1.4 m")) is not None
 
 
-def test_submit_text_and_file_both(client):
-    r = client.post("/submit", data={"text": "hello doc text"},
+def test_submit_text_and_file_is_one_combined_job(client):
+    r = client.post("/submit", data={"text": "email body weight 21000kg"},
                     files={"file": ("a.pdf", b"%PDF-1.4 both", "application/pdf")},
                     follow_redirects=False)
     assert r.status_code == 303
-    assert store.find_job_by_hash(ingest._sha256(b"hello doc text")) is not None
-    assert store.find_job_by_hash(ingest._sha256(b"%PDF-1.4 both")) is not None
+    # ONE job: the attachment is the document; the email text is stored as context
+    assert store.find_job_by_hash(ingest._sha256(b"email body weight 21000kg")) is None
+    job = store.find_job_by_hash(ingest._sha256(b"%PDF-1.4 both"))
+    assert job is not None
+    assert crypto.decrypt_str(job.enc_context) == "email body weight 21000kg"
+
+
+def test_worker_merges_email_context(client, tmp_path, monkeypatch):
+    settings = get_settings(str(tmp_path))
+    # ingest a combined item: text body + a (fake) pdf attachment
+    ingest.UploadSource(settings).ingest_bytes(
+        b"%PDF-1.4 doc", "scan.pdf", extra_text="Container MSKU1234567")
+    job = store.find_job_by_hash(ingest._sha256(b"%PDF-1.4 doc"))
+
+    monkeypatch.setattr(reader, "read_document",
+                        lambda data, name, s: reader.ReaderResult([], "weight 21000kg", False))
+    seen = {}
+    def capture(text, s):
+        seen["text"] = text
+        return InvoiceFields(invoice_number="X", invoice_date="2026-01-01", total=1.0)
+    monkeypatch.setattr(extractor, "extract_fields", capture)
+
+    worker.process_job(job.id, settings)
+    # both the email body and the attachment text reach the extractor
+    assert "Container MSKU1234567" in seen["text"]
+    assert "weight 21000kg" in seen["text"]
 
 
 def test_submit_empty_is_noop(client):
