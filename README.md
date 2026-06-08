@@ -4,8 +4,8 @@ Fully **local** invoice processing: reads PDFs/scans, extracts structured data w
 local LLM, scores confidence with rules, and stores everything **encrypted** in SQLite.
 Nothing leaves the machine — all processing runs on your Mac (Apple Silicon).
 
-> Status: **Phase 1 (MVP)** — end-to-end pipeline `ingest → reader → extractor → validator → store` + CLI. 20 tests passing.
-> Next: Review UI (Phase 2), email intake + export to an external system (Phase 3).
+> Status: **Phases 1–2 complete** — end-to-end pipeline (`ingest → reader → extractor → validator → store`) + a local web Review UI (side-by-side review, edit, approve, upload). 31 tests passing.
+> Next: email intake + export to an external system (Phase 3).
 
 ---
 
@@ -72,10 +72,22 @@ invoiceflow watch &
 # 3. process the queue
 invoiceflow work --once        # single pass; omit --once to run continuously
 
-# 4. inspect results
+# 4. inspect results (CLI)
 invoiceflow list                       # all
 invoiceflow list --status needs_review # only those needing review
+
+# 5. review in the browser (side-by-side, edit, approve, upload)
+invoiceflow serve                      # http://127.0.0.1:8000
 ```
+
+### Review UI
+
+`invoiceflow serve` starts a local web app (binds `127.0.0.1` only):
+
+- **List** — all invoices with status and confidence; low-confidence rows highlighted; upload new files.
+- **Detail** — the original document on the left, extracted fields on the right; low-confidence fields highlighted with reasons; edit and **Save** (writes an encrypted audit trail) or **Approve** (status → `verified`).
+
+Documents are decrypted in memory and rendered with the browser's native PDF/image viewers — no external/CDN assets, fully offline.
 
 ## Configuration (environment variables)
 
@@ -113,6 +125,6 @@ Unit tests mock Ollama and Tesseract, so they pass without them; a full end-to-e
 
 ## Roadmap
 
-- [x] **Phase 1** — ingest→store pipeline + CLI (current)
-- [ ] **Phase 2** — Review UI (FastAPI + PDF.js): original ↔ fields, low-confidence highlighting, editing, approve, audit; web upload
-- [ ] **Phase 3** — email intake (IMAP) + `Exporter` (CSV/JSON → ERP/API)
+- [x] **Phase 1** — ingest→store pipeline + CLI
+- [x] **Phase 2** — Review UI (FastAPI): side-by-side original ↔ fields, low-confidence highlighting, editing, approve, audit; web upload
+- [ ] **Phase 3** — email intake (IMAP) + `Exporter` (CSV/JSON → ERP/API); plus enhancements: OCR region overlay, per-line-item editing
