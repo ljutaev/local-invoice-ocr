@@ -84,3 +84,18 @@ def test_page_image_and_layout(client, tmp_path):
     assert d.status_code == 200
     assert "INV-OVL" in d.text
     assert "/page/0.png" in d.text
+
+
+def test_download_pdf_converts_png(client, tmp_path):
+    import io
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new("RGB", (50, 30), (255, 255, 255)).save(buf, "PNG")
+    enc = tmp_path / "scan.bin"
+    enc.write_bytes(crypto.encrypt(buf.getvalue()))
+    jid = store.create_job("upload", "scan.png", "hpng", str(enc))
+    iid = store.save_invoice(jid, InvoiceFields(invoice_number="INV-PNG"), {}, "low")
+    r = client.get(f"/invoice/{iid}/pdf")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/pdf"
+    assert r.content[:5] == b"%PDF-"

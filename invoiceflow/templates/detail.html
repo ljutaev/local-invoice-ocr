@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-<p><a href="/">← back</a> · invoice #{{ inv.id }} · status: {{ inv.status }}</p>
+<p><a href="/">← back</a> · invoice #{{ inv.id }} · status: {{ inv.status }} ·
+  <a href="/invoice/{{ inv.id }}/pdf">⬇ Download PDF (for CargoWise)</a></p>
 <p class="hint">Click a field to highlight where it appears on the document.</p>
 <div class="split">
   <div class="doc" id="doc">

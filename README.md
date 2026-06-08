@@ -95,6 +95,7 @@ Run the worker continuously as a background service — see [`service/README.md`
 
 - **List** — all invoices with status and confidence; low-confidence rows highlighted; upload new files.
 - **Detail** — the original document (rendered as page images) on the left, extracted fields on the right; low-confidence fields highlighted with reasons; **click a field to highlight where its value appears on the document** (via stored word boxes); edit fields and line items and **Save** (writes an encrypted audit trail) or **Approve** (status → `verified`).
+- **Download PDF** — any input (PNG/JPG/photo) is converted to PDF on demand, for downstream systems that accept only PDF (e.g. CargoWise).
 
 Documents are decrypted in memory and rendered with the browser's native PDF/image viewers — no external/CDN assets, fully offline.
 

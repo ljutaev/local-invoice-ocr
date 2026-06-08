@@ -58,6 +58,16 @@ def create_app(settings: Settings) -> FastAPI:
         png = reader.render_page_png(data, name, page_index)
         return Response(content=png, media_type="image/png")
 
+    @app.get("/invoice/{invoice_id}/pdf")
+    def as_pdf(invoice_id: int):
+        from invoiceflow import convert
+        data, media = store.get_original_bytes(invoice_id)
+        ext = {"application/pdf": "pdf", "image/png": "png",
+               "image/jpeg": "jpg"}.get(media, "pdf")
+        pdf = convert.to_pdf(data, f"x.{ext}")
+        return Response(content=pdf, media_type="application/pdf", headers={
+            "Content-Disposition": f'attachment; filename="invoice-{invoice_id}.pdf"'})
+
     @app.post("/invoice/{invoice_id}")
     async def save(invoice_id: int, request: Request):
         form = await request.form()
