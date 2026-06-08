@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Invoices</h1>
+<form action="/upload" method="post" enctype="multipart/form-data" class="upload">
+  <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required>
+  <button type="submit">Upload</button>
+</form>
+<p class="filters">
+  <a href="/">all</a> ·
+  <a href="/?status=needs_review">needs review</a> ·
+  <a href="/?status=verified">verified</a>
+</p>
+<table>
+  <tr><th>#</th><th>Invoice</th><th>Vendor</th><th>Total</th><th>Status</th><th>Confidence</th></tr>
+  {% for r in rows %}
+  <tr class="{{ 'low' if r.summary == 'low' else '' }}">
+    <td><a href="/invoice/{{ r.id }}">{{ r.id }}</a></td>
+    <td>{{ r.invoice_number }}</td><td>{{ r.vendor }}</td><td>{{ r.total }}</td>
+    <td>{{ r.status }}</td><td>{{ r.summary }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

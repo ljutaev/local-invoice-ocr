@@ -37,8 +37,8 @@ def cmd_work(settings, once: bool) -> None:
 
 
 def cmd_list(settings, status: str | None) -> None:
-    for inv in store.list_invoices(status=status):
-        print(f"#{inv.id}\t{inv.status}\t{inv.confidence_summary}\tjob={inv.job_id}")
+    for r in store.list_invoice_summaries(status=status):
+        print(f"#{r['id']}\t{r['status']}\t{r['summary']}\t{r['invoice_number']}\t{r['vendor']}")
 
 
 def main() -> None:
@@ -49,6 +49,9 @@ def main() -> None:
     w.add_argument("--once", action="store_true")
     li = sub.add_parser("list")
     li.add_argument("--status", default=None)
+    sv = sub.add_parser("serve")
+    sv.add_argument("--host", default="127.0.0.1")
+    sv.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
 
     settings = get_settings()
@@ -61,6 +64,10 @@ def main() -> None:
         cmd_work(settings, once=args.once)
     elif args.cmd == "list":
         cmd_list(settings, status=args.status)
+    elif args.cmd == "serve":
+        import uvicorn
+        from invoiceflow.webapp import create_app
+        uvicorn.run(create_app(settings), host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

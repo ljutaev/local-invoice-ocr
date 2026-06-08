@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="/">← back</a> · invoice #{{ inv.id }} · status: {{ inv.status }}</p>
+<div class="split">
+  <div class="doc">
+    <iframe src="/invoice/{{ inv.id }}/file"></iframe>
+  </div>
+  <form method="post" action="/invoice/{{ inv.id }}">
+    {% macro field(name, value) %}
+      {% set fl = flags.get(name) %}
+      <div class="field {{ 'low' if fl and fl.confidence == 'low' else '' }}">
+        <label>{{ name }}</label>
+        <input name="{{ name }}" value="{{ value if value is not none else '' }}">
+        {% if fl and fl.reasons %}<div class="reasons">{{ fl.reasons|join(', ') }}</div>{% endif %}
+      </div>
+    {% endmacro %}
+    {{ field('invoice_number', fields.invoice_number) }}
+    {{ field('invoice_date', fields.invoice_date) }}
+    {{ field('due_date', fields.due_date) }}
+    <div class="field {{ 'low' if flags.get('vendor_name') and flags.get('vendor_name').confidence == 'low' else '' }}">
+      <label>vendor_name</label>
+      <input name="vendor_name" value="{{ fields.vendor.name }}">
+    </div>
+    <div class="field"><label>vendor_address</label>
+      <input name="vendor_address" value="{{ fields.vendor.address }}"></div>
+    <div class="field"><label>vendor_tax_id</label>
+      <input name="vendor_tax_id" value="{{ fields.vendor.tax_id }}"></div>
+    {{ field('buyer_name', fields.buyer_name) }}
+    {{ field('currency', fields.currency) }}
+    {{ field('subtotal', fields.subtotal) }}
+    {{ field('tax', fields.tax) }}
+    {{ field('total', fields.total) }}
+    {{ field('po_number', fields.po_number) }}
+    {{ field('payment_terms', fields.payment_terms) }}
+
+    {% if fields.line_items %}
+    <h3>Line items (read-only)</h3>
+    <table>
+      <tr><th>Description</th><th>Qty</th><th>Unit</th><th>Amount</th></tr>
+      {% for li in fields.line_items %}
+      <tr><td>{{ li.description }}</td><td>{{ li.qty }}</td>
+          <td>{{ li.unit_price }}</td><td>{{ li.amount }}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    <p style="margin-top:14px">
+      <button type="submit">Save</button>
+      <button type="submit" formaction="/invoice/{{ inv.id }}/approve" class="approve">Approve</button>
+    </p>
+  </form>
+</div>
+{% endblock %}
