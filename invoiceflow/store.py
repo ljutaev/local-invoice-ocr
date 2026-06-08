@@ -19,6 +19,7 @@ class LoadedInvoice:
     status: str
     fields: InvoiceFields
     flags: dict
+    layout: dict | None = None
 
 
 def create_job(source: str, source_ref: str, file_hash: str, enc_file_path: str) -> int:
@@ -35,11 +36,14 @@ def find_job_by_hash(file_hash: str) -> Job | None:
         return s.query(Job).filter(Job.file_hash == file_hash).first()
 
 
-def save_invoice(job_id: int, fields: InvoiceFields, flags: dict, summary: str) -> int:
+def save_invoice(job_id: int, fields: InvoiceFields, flags: dict, summary: str,
+                 layout_json: str | None = None) -> int:
     enc = crypto.encrypt_str(fields.model_dump_json())
+    enc_layout = crypto.encrypt_str(layout_json) if layout_json else None
     with SessionLocal() as s:
         inv = Invoice(job_id=job_id, status=NEEDS_REVIEW, enc_fields=enc,
-                      field_flags=flags, confidence_summary=summary)
+                      enc_layout=enc_layout, field_flags=flags,
+                      confidence_summary=summary)
         s.add(inv)
         s.commit()
         return inv.id
@@ -49,7 +53,8 @@ def get_invoice(invoice_id: int) -> LoadedInvoice:
     with SessionLocal() as s:
         inv = s.get(Invoice, invoice_id)
         fields = InvoiceFields.model_validate_json(crypto.decrypt_str(inv.enc_fields))
-        return LoadedInvoice(inv.id, inv.job_id, inv.status, fields, inv.field_flags)
+        layout = json.loads(crypto.decrypt_str(inv.enc_layout)) if inv.enc_layout else None
+        return LoadedInvoice(inv.id, inv.job_id, inv.status, fields, inv.field_flags, layout)
 
 
 def list_invoices(status: str | None = None) -> list[Invoice]:

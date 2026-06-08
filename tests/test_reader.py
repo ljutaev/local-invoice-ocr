@@ -29,10 +29,26 @@ def test_digital_pdf_uses_text_not_ocr(tmp_path):
 
 def test_imageonly_pdf_routes_to_ocr(tmp_path, monkeypatch):
     s = get_settings(str(tmp_path))
-    # blank PDF (no text layer) → OCR path; stub OCR to avoid tesseract dep in unit test
-    monkeypatch.setattr(reader, "_ocr_page", lambda pix, lang: "OCR TEXT INV-7")
+    # blank PDF (no text layer) → OCR path; stub OCR to avoid tesseract dep in unit test.
+    # _ocr_page now returns (text, word-boxes).
+    monkeypatch.setattr(reader, "_ocr_page",
+                        lambda pix, lang: ("OCR TEXT INV-7", [{"t": "INV-7", "x0": 1, "y0": 2, "x1": 3, "y1": 4}]))
     blank = fitz.open()
     blank.new_page()
     result = reader.read_document(blank.tobytes(), "scan.pdf", s)
     assert result.used_ocr is True
     assert "INV-7" in result.full_text
+    assert result.pages[0].words[0]["t"] == "INV-7"
+
+
+def test_digital_pdf_has_word_boxes(tmp_path):
+    s = get_settings(str(tmp_path))
+    r = reader.read_document(_make_text_pdf(), "a.pdf", s)
+    pg = r.pages[0]
+    assert pg.width > 0 and pg.height > 0
+    assert any("INV-42" in w["t"] for w in pg.words)
+
+
+def test_render_page_png_returns_png(tmp_path):
+    data = reader.render_page_png(_make_text_pdf(), "a.pdf", 0)
+    assert data[:8] == b"\x89PNG\r\n\x1a\n"

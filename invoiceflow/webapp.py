@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from invoiceflow import ingest, store
+from invoiceflow import ingest, reader, store
 from invoiceflow.config import Settings, ensure_dirs
 from invoiceflow.db import init_db
 from invoiceflow.schema import InvoiceFields
@@ -42,14 +42,21 @@ def create_app(settings: Settings) -> FastAPI:
     def detail(request: Request, invoice_id: int):
         inv = store.get_invoice(invoice_id)
         return templates.TemplateResponse(request=request, name="detail.html", context={
-            "inv": inv, "fields": inv.fields,
-            "flags": inv.flags, "edit_fields": _EDIT_FIELDS,
+            "inv": inv, "fields": inv.fields, "flags": inv.flags,
+            "edit_fields": _EDIT_FIELDS, "layout": inv.layout or {"pages": []},
         })
 
     @app.get("/invoice/{invoice_id}/file")
     def original(invoice_id: int):
         data, media = store.get_original_bytes(invoice_id)
         return Response(content=data, media_type=media)
+
+    @app.get("/invoice/{invoice_id}/page/{page_index}.png")
+    def page_png(invoice_id: int, page_index: int):
+        data, media = store.get_original_bytes(invoice_id)
+        name = "x.pdf" if media == "application/pdf" else "x.png"
+        png = reader.render_page_png(data, name, page_index)
+        return Response(content=png, media_type="image/png")
 
     @app.post("/invoice/{invoice_id}")
     async def save(invoice_id: int, request: Request):

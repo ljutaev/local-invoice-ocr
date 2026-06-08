@@ -1,9 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
 <p><a href="/">← back</a> · invoice #{{ inv.id }} · status: {{ inv.status }}</p>
+<p class="hint">Click a field to highlight where it appears on the document.</p>
 <div class="split">
-  <div class="doc">
-    <iframe src="/invoice/{{ inv.id }}/file"></iframe>
+  <div class="doc" id="doc">
+    {% for pg in layout.pages %}
+    <div class="page" data-page="{{ loop.index0 }}" data-w="{{ pg.w }}" data-h="{{ pg.h }}">
+      <img src="/invoice/{{ inv.id }}/page/{{ loop.index0 }}.png" alt="page {{ loop.index0 }}">
+      <div class="ovl"></div>
+    </div>
+    {% endfor %}
+    {% if not layout.pages %}
+      <iframe src="/invoice/{{ inv.id }}/file"></iframe>
+    {% endif %}
   </div>
   <form method="post" action="/invoice/{{ inv.id }}">
     {% macro field(name, value) %}
@@ -54,4 +63,37 @@
     </p>
   </form>
 </div>
+
+<script>
+const LAYOUT = {{ layout | tojson }};
+function norm(s){ return (s || '').toLowerCase().replace(/\s+/g, ''); }
+function clearHl(){ document.querySelectorAll('.ovl').forEach(o => o.innerHTML = ''); }
+function highlight(value){
+  clearHl();
+  const nv = norm(value);
+  if (nv.length < 2) return;
+  document.querySelectorAll('.page').forEach(pg => {
+    const idx = +pg.dataset.page, W = +pg.dataset.w || 1, H = +pg.dataset.h || 1;
+    const ovl = pg.querySelector('.ovl');
+    const words = (LAYOUT.pages[idx] || {}).words || [];
+    words.forEach(w => {
+      const nt = norm(w.t);
+      if (nt.length >= 2 && (nv.includes(nt) || nt.includes(nv))) {
+        const d = document.createElement('div');
+        d.className = 'hl';
+        d.style.left = (w.x0 / W * 100) + '%';
+        d.style.top = (w.y0 / H * 100) + '%';
+        d.style.width = ((w.x1 - w.x0) / W * 100) + '%';
+        d.style.height = ((w.y1 - w.y0) / H * 100) + '%';
+        ovl.appendChild(d);
+      }
+    });
+  });
+}
+document.querySelectorAll('form input').forEach(inp => {
+  const fire = () => highlight(inp.value);
+  inp.addEventListener('focus', fire);
+  inp.addEventListener('click', fire);
+});
+</script>
 {% endblock %}

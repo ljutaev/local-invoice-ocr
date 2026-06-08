@@ -5,7 +5,7 @@ local LLM, scores confidence with rules, and stores everything **encrypted** in 
 Nothing leaves the machine — all processing runs on your Mac (Apple Silicon).
 
 > Status: **Phases 1–3 complete** — pipeline (`ingest → reader → extractor → validator → store`), local web Review UI (side-by-side review, edit incl. line items, approve, upload), email intake (IMAP), CSV/JSON export, auto-retry, and a launchd service. 38 tests passing.
-> Remaining enhancements: a concrete ERP/API export adapter (depends on the target system) and OCR region overlay in the UI.
+> Remaining: a concrete ERP/API export adapter (depends on the target system). For now, export is manual via CSV/JSON.
 
 ---
 
@@ -94,7 +94,7 @@ Run the worker continuously as a background service — see [`service/README.md`
 `invoiceflow serve` starts a local web app (binds `127.0.0.1` only):
 
 - **List** — all invoices with status and confidence; low-confidence rows highlighted; upload new files.
-- **Detail** — the original document on the left, extracted fields on the right; low-confidence fields highlighted with reasons; edit and **Save** (writes an encrypted audit trail) or **Approve** (status → `verified`).
+- **Detail** — the original document (rendered as page images) on the left, extracted fields on the right; low-confidence fields highlighted with reasons; **click a field to highlight where its value appears on the document** (via stored word boxes); edit fields and line items and **Save** (writes an encrypted audit trail) or **Approve** (status → `verified`).
 
 Documents are decrypted in memory and rendered with the browser's native PDF/image viewers — no external/CDN assets, fully offline.
 
@@ -139,4 +139,5 @@ Unit tests mock Ollama and Tesseract, so they pass without them; a full end-to-e
 - [x] **Phase 1** — ingest→store pipeline + CLI
 - [x] **Phase 2** — Review UI (FastAPI): side-by-side original ↔ fields, low-confidence highlighting, editing, approve, audit; web upload
 - [x] **Phase 3** — email intake (IMAP), CSV/JSON export, auto-retry, line-item editing, launchd service
-- [ ] **Later** — concrete ERP/API export adapter (target-dependent); OCR region overlay (click field → highlight region on the document)
+- [x] **Region highlighting** — click a field → highlight its location on the document (word-box overlay)
+- [ ] **Later** — concrete ERP/API export adapter (target-dependent)

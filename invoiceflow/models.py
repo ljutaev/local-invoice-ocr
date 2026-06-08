@@ -40,6 +40,7 @@ class Invoice(Base):
     job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), index=True)
     status: Mapped[str] = mapped_column(String(16), default=NEEDS_REVIEW, index=True)
     enc_fields: Mapped[bytes] = mapped_column(LargeBinary)        # encrypted JSON
+    enc_layout: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)  # encrypted page/word boxes
     field_flags: Mapped[dict] = mapped_column(JSON, default=dict)  # NOT sensitive
     confidence_summary: Mapped[str] = mapped_column(String(32), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

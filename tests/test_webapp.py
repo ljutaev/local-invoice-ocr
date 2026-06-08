@@ -62,3 +62,25 @@ def test_upload_route_creates_job(client):
                     follow_redirects=False)
     assert r.status_code == 303
     assert store.find_job_by_hash(ingest._sha256(b"%PDF-1.4 up")) is not None
+
+
+def test_page_image_and_layout(client, tmp_path):
+    import fitz
+    doc = fitz.open()
+    doc.new_page().insert_text((72, 72), "INVOICE INV-OVL on this page for rendering")
+    enc = tmp_path / "o.bin"
+    enc.write_bytes(crypto.encrypt(doc.tobytes()))
+    jid = store.create_job("upload", "o.pdf", "hovl", str(enc))
+    iid = store.save_invoice(
+        jid, InvoiceFields(invoice_number="INV-OVL"), {}, "low",
+        layout_json='{"pages":[{"w":100,"h":200,"words":[{"t":"INV-OVL","x0":1,"y0":2,"x1":9,"y1":7}]}]}')
+    # page image renders
+    img = client.get(f"/invoice/{iid}/page/0.png")
+    assert img.status_code == 200
+    assert img.headers["content-type"] == "image/png"
+    assert img.content[:8] == b"\x89PNG\r\n\x1a\n"
+    # detail page embeds the layout for the JS overlay
+    d = client.get(f"/invoice/{iid}")
+    assert d.status_code == 200
+    assert "INV-OVL" in d.text
+    assert "/page/0.png" in d.text

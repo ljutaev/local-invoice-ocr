@@ -28,6 +28,9 @@ def init_db(settings: Settings):
     if "exported_at" not in cols:
         with _engine.begin() as conn:
             conn.execute(text("ALTER TABLE invoices ADD COLUMN exported_at DATETIME"))
+    if "enc_layout" not in cols:
+        with _engine.begin() as conn:
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN enc_layout BLOB"))
 
     SessionLocal.configure(bind=_engine, future=True)
     return _engine

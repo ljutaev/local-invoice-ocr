@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,7 +20,9 @@ def process_job(job_id: int, settings: Settings, worker_id: str = "w1") -> None:
         rr = reader.read_document(data, source_ref, settings)
         fields = extractor.extract_fields(rr.full_text, settings)
         flags, summary = validator.validate(fields, rr.full_text)
-        store.save_invoice(job_id, fields, flags, summary)
+        layout = {"pages": [{"w": p.width, "h": p.height, "words": p.words}
+                            for p in rr.pages]}
+        store.save_invoice(job_id, fields, flags, summary, layout_json=json.dumps(layout))
         _finish(job_id, DONE, None)
     except Exception as e:  # noqa: BLE001 — record and surface in UI
         if attempts < settings.max_attempts:
