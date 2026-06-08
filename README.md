@@ -93,7 +93,7 @@ Run the worker continuously as a background service — see [`service/README.md`
 
 `invoiceflow serve` starts a local web app (binds `127.0.0.1` only):
 
-- **List** — all invoices with status and confidence; low-confidence rows highlighted; upload new files.
+- **List** — all invoices with status and confidence; low-confidence rows highlighted. **Manual intake**: paste document text and/or attach a file to add it to the queue (interim input until email automation is wired up).
 - **Detail** — the original document (rendered as page images) on the left, extracted fields on the right; low-confidence fields highlighted with reasons; **click a field to highlight where its value appears on the document** (via stored word boxes); edit fields and line items and **Save** (writes an encrypted audit trail) or **Approve** (status → `verified`).
 - **Download PDF** — any input (PNG/JPG/photo) is converted to PDF on demand, for downstream systems that accept only PDF (e.g. CargoWise).
 

@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Invoices</h1>
-<form action="/upload" method="post" enctype="multipart/form-data" class="upload">
-  <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required>
-  <button type="submit">Upload</button>
+<form action="/submit" method="post" enctype="multipart/form-data" class="intake">
+  <p><strong>Add a document</strong> — paste text and/or attach a file:</p>
+  <textarea name="text" rows="5" placeholder="Paste invoice / document text here (optional)"></textarea>
+  <p>
+    <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg">
+    <button type="submit">Add to queue</button>
+  </p>
+  <p class="hint">Then run <code>invoiceflow work</code> to process. (Email intake comes later.)</p>
 </form>
 <p class="filters">
   <a href="/">all</a> ·

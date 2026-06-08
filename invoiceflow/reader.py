@@ -47,6 +47,10 @@ def _ocr_page(pix: "fitz.Pixmap", lang: str) -> tuple[str, list]:
 
 
 def read_document(data: bytes, filename: str, settings: Settings) -> ReaderResult:
+    # Pasted text arrives as a .txt "document": use it directly, no PDF/OCR.
+    if filename.lower().endswith(".txt"):
+        text = data.decode("utf-8", errors="replace").strip()
+        return ReaderResult(pages=[Page(text=text)], full_text=text, used_ocr=False)
     doc = fitz.open(stream=data, filetype=_filetype(filename))
     pages: list[Page] = []
     used_ocr = False

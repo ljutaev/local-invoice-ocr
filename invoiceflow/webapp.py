@@ -115,4 +115,19 @@ def create_app(settings: Settings) -> FastAPI:
         ingest.UploadSource(settings).ingest_bytes(await file.read(), file.filename)
         return RedirectResponse("/", status_code=303)
 
+    @app.post("/submit")
+    async def submit(request: Request):
+        """Manual intake: pasted text and/or an attached file (interim, pre-email)."""
+        form = await request.form()
+        src = ingest.UploadSource(settings)
+        up = form.get("file")
+        if up is not None and getattr(up, "filename", ""):
+            data = await up.read()
+            if data:
+                src.ingest_bytes(data, up.filename)
+        text = (form.get("text") or "").strip()
+        if text:
+            src.ingest_bytes(text.encode("utf-8"), "pasted.txt")
+        return RedirectResponse("/", status_code=303)
+
     return app

@@ -7,6 +7,8 @@ th, td { border: 1px solid #e2e2ec; padding: 6px 10px; text-align: left; }
 th { background: #4f46e5; color: #fff; }
 tr.low td { background: #fff7ed; }
 .filters { margin: 10px 0; }
+.intake { border: 1px solid #e2e2ec; border-radius: 8px; padding: 12px 14px; margin: 10px 0; background: #fafaff; }
+.intake textarea { width: 100%; font-family: inherit; padding: 6px; box-sizing: border-box; }
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .doc { max-height: 85vh; overflow: auto; }
 .doc iframe { width: 100%; height: 80vh; border: 1px solid #e2e2ec; }
